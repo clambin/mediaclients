@@ -1,0 +1,34 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/set"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod"
+    directory: "/tabulator"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod"
+    directory: "/slackbot"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod"
+    directory: "/httpclient"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod"
+    directory: "/httpserver"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod"
+    directory: "/cache"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod"
+    directory: "/taskmanager"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
