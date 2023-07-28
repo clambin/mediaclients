@@ -2,7 +2,6 @@ package transmission
 
 import (
 	"bytes"
-	"github.com/clambin/go-common/httpclient"
 	"io"
 	"net/http"
 )
@@ -12,13 +11,6 @@ var _ http.RoundTripper = &authenticator{}
 type authenticator struct {
 	sessionID string
 	next      http.RoundTripper
-}
-
-func withAuthenticator() httpclient.Option {
-	return func(next http.RoundTripper) http.RoundTripper {
-		a := authenticator{next: next}
-		return &a
-	}
 }
 
 const transmissionSessionIDHeader = "X-Transmission-Session-Id"

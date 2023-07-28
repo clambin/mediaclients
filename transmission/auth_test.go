@@ -1,7 +1,6 @@
 package transmission
 
 import (
-	"github.com/clambin/go-common/httpclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -11,12 +10,9 @@ import (
 )
 
 func TestAuthenticator_RoundTrip(t *testing.T) {
-	h := server{sessionID: "1234"}
+	h := &server{sessionID: "1234"}
 
-	c := http.Client{Transport: httpclient.NewRoundTripper(
-		withAuthenticator(),
-		httpclient.WithRoundTripper(&h),
-	)}
+	c := http.Client{Transport: &authenticator{next: h}}
 
 	req, _ := http.NewRequest(http.MethodPost, "application/json", io.NopCloser(strings.NewReader("foo")))
 	resp, err := c.Do(req)
