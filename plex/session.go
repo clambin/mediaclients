@@ -15,9 +15,8 @@ type Sessions struct {
 }
 
 // GetSessions retrieves session information from the server.
-func (c *Client) GetSessions(ctx context.Context) (sessions Sessions, err error) {
-	err = c.call(ctx, "/status/sessions", &sessions)
-	return
+func (c *Client) GetSessions(ctx context.Context) (Sessions, error) {
+	return call[Sessions](ctx, c, "/status/sessions")
 }
 
 // Session contains one record in a Sessions

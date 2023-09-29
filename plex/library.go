@@ -200,17 +200,14 @@ type ShowLibraryEntry struct {
 	OriginalTitle string  `json:"originalTitle,omitempty"`
 }
 
-func (c *Client) GetLibraries(ctx context.Context) (libraries Libraries, err error) {
-	err = c.call(ctx, "/library/sections", &libraries)
-	return
+func (c *Client) GetLibraries(ctx context.Context) (Libraries, error) {
+	return call[Libraries](ctx, c, "/library/sections")
 }
 
-func (c *Client) GetMovieLibrary(ctx context.Context, key string) (library MovieLibrary, err error) {
-	err = c.call(ctx, fmt.Sprintf("/library/sections/%s/all", key), &library)
-	return
+func (c *Client) GetMovieLibrary(ctx context.Context, key string) (MovieLibrary, error) {
+	return call[MovieLibrary](ctx, c, fmt.Sprintf("/library/sections/%s/all", key))
 }
 
-func (c *Client) GetShowLibrary(ctx context.Context, key string) (library ShowLibrary, err error) {
-	err = c.call(ctx, fmt.Sprintf("/library/sections/%s/all", key), &library)
-	return
+func (c *Client) GetShowLibrary(ctx context.Context, key string) (ShowLibrary, error) {
+	return call[ShowLibrary](ctx, c, fmt.Sprintf("/library/sections/%s/all", key))
 }

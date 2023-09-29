@@ -37,14 +37,17 @@ func New(username, password, product, version, url string, roundTripper http.Rou
 	}
 }
 
-func (c *Client) call(ctx context.Context, endpoint string, response any) error {
+func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
 	target := c.URL + endpoint
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	req.Header.Add("Accept", "application/json")
 
+	var response struct {
+		MediaContainer T `json:"MediaContainer"`
+	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return err
+		return response.MediaContainer, err
 	}
 
 	defer func() {
@@ -52,16 +55,12 @@ func (c *Client) call(ctx context.Context, endpoint string, response any) error 
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
+		return response.MediaContainer, errors.New(resp.Status)
 	}
 
-	mediaContainer := struct {
-		MediaContainer any `json:"MediaContainer"`
-	}{MediaContainer: response}
-
-	if err = json.NewDecoder(resp.Body).Decode(&mediaContainer); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		err = fmt.Errorf("decode: %w", err)
 	}
 
-	return err
+	return response.MediaContainer, err
 }

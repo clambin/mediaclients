@@ -92,6 +92,18 @@ func TestRadarrClient_GetMovieByID(t *testing.T) {
 	assert.Equal(t, "foo", movie.Title)
 }
 
+func TestRadarrClient_Failure(t *testing.T) {
+	s := NewTestServer(radarrResponses, "1234")
+
+	c := xxxarr.NewRadarrClient(s.server.URL, "1234", nil)
+	_, err := c.GetSystemStatus(context.Background())
+	assert.NoError(t, err)
+
+	s.server.Close()
+	_, err = c.GetSystemStatus(context.Background())
+	assert.Error(t, err)
+}
+
 func TestRadarrClient_BadKey(t *testing.T) {
 	s := NewTestServer(radarrResponses, "1234")
 	defer s.server.Close()

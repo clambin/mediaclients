@@ -26,39 +26,41 @@ func NewClient(url string, roundTripper http.RoundTripper) *Client {
 }
 
 // GetSessionParameters calls Transmission's "session-get" method. It returns the Transmission instance's configuration parameters
-func (client *Client) GetSessionParameters(ctx context.Context) (params SessionParameters, err error) {
-	err = client.post(ctx, "session-get", &params)
+func (c *Client) GetSessionParameters(ctx context.Context) (SessionParameters, error) {
+	params, err := post[SessionParameters](ctx, c, "session-get")
 	if err == nil && params.Result != "success" {
 		err = fmt.Errorf("session-get failed: %s", params.Result)
 	}
-	return
+	return params, err
 }
 
 // GetSessionStatistics calls Transmission's "session-stats" method. It returns the Transmission instance's session statistics
-func (client *Client) GetSessionStatistics(ctx context.Context) (stats SessionStats, err error) {
-	err = client.post(ctx, "session-stats", &stats)
+func (c *Client) GetSessionStatistics(ctx context.Context) (SessionStats, error) {
+	stats, err := post[SessionStats](ctx, c, "session-stats")
 	if err == nil && stats.Result != "success" {
 		err = fmt.Errorf("session-stats failed: %s", stats.Result)
 	}
-	return
+	return stats, err
 }
 
-func (client *Client) post(ctx context.Context, method string, response interface{}) error {
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, client.URL, bytes.NewBufferString("{ \"method\": \""+method+"\" }"))
+func post[T any](ctx context.Context, client *Client, method string) (T, error) {
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, client.URL, bytes.NewBufferString(`{ "method": "`+method+`" }`))
 	req.Header.Set("Content-Type", "application/json")
+
+	var response T
 	resp, err := client.HTTPClient.Do(req)
 	if err != nil {
-		return err
+		return response, err
 	}
 
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
+		return response, errors.New(resp.Status)
 	}
 
-	if err = json.NewDecoder(resp.Body).Decode(response); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		err = fmt.Errorf("decode: %w", err)
 	}
-	return err
+	return response, err
 }
