@@ -1,9 +1,11 @@
 module github.com/clambin/mediaclients
 
-go 1.20
+go 1.21
+
+toolchain go1.21.4
 
 require (
-	github.com/clambin/go-common/set v0.2.0
+	github.com/clambin/go-common/set v0.3.0
 	github.com/stretchr/testify v1.8.4
 )
 

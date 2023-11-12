@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/go-common/set"
-	"sort"
 	"strings"
 )
 
@@ -231,7 +230,7 @@ func (s Session) GetProgress() float64 {
 
 // GetVideoMode returns the session's video mode (transcoding, direct play, etc).
 func (s Session) GetVideoMode() string {
-	decisions := set.Create[string]()
+	decisions := set.New[string]()
 	for _, media := range s.Media {
 		for _, part := range media.Part {
 			videoDecision := part.Decision
@@ -244,10 +243,9 @@ func (s Session) GetVideoMode() string {
 			decisions.Add(videoDecision)
 		}
 	}
-	modes := decisions.List()
+	modes := decisions.ListOrdered()
 	if len(modes) == 0 {
 		return "unknown"
 	}
-	sort.Strings(modes)
 	return strings.Join(modes, ",")
 }
