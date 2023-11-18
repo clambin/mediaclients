@@ -20,26 +20,44 @@ func TestClient_GetLibraries(t *testing.T) {
 
 	libraries, err := c.GetLibraries(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []plex.LibrariesDirectory{
+	assert.Equal(t, []plex.Library{
 		{Key: "1", Type: "movie", Title: "Movies"},
 		{Key: "2", Type: "show", Title: "Shows"},
-	}, libraries.Directory)
+	}, libraries)
 }
 
-func TestClient_GetMovieLibrary(t *testing.T) {
+func TestClient_GetMovies(t *testing.T) {
 	c, s := makeClientAndServer(nil)
 	defer s.Close()
 
-	movies, err := c.GetMovieLibrary(context.Background(), "1")
+	movies, err := c.GetMovies(context.Background(), "1")
 	require.NoError(t, err)
-	assert.Equal(t, plex.MovieLibrary{Metadata: []plex.MovieLibraryEntry{{Guid: "1", Title: "foo"}}}, movies)
+	assert.Equal(t, []plex.Movie{{Guid: "1", Title: "foo"}}, movies)
 }
 
-func TestClient_GetShowLibrary(t *testing.T) {
+func TestClient_GetShows(t *testing.T) {
 	c, s := makeClientAndServer(nil)
 	defer s.Close()
 
-	movies, err := c.GetShowLibrary(context.Background(), "2")
+	shows, err := c.GetShows(context.Background(), "2")
 	require.NoError(t, err)
-	assert.Equal(t, plex.ShowLibrary{Metadata: []plex.ShowLibraryEntry{{Guid: "2", Title: "bar"}}}, movies)
+	assert.Equal(t, []plex.Show{{Guid: "2", Title: "bar"}}, shows)
+}
+
+func TestClient_GetSeasons(t *testing.T) {
+	c, s := makeClientAndServer(nil)
+	defer s.Close()
+
+	shows, err := c.GetSeasons(context.Background(), "200")
+	require.NoError(t, err)
+	assert.Equal(t, []plex.Season{{Guid: "2", Title: "Season 1"}}, shows)
+}
+
+func TestClient_GetEpisodes(t *testing.T) {
+	c, s := makeClientAndServer(nil)
+	defer s.Close()
+
+	shows, err := c.GetEpisodes(context.Background(), "201")
+	require.NoError(t, err)
+	assert.Equal(t, []plex.Episode{{Guid: "2", Title: "Episode 1"}}, shows)
 }

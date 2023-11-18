@@ -53,4 +53,14 @@ var plexResponses = map[string]string{
            { "guid": "2", "title": "bar" }
         ]
     }}`,
+	"/library/metadata/200/children": `{ "MediaContainer" : {
+        "Metadata": [
+           { "guid": "2", "title": "Season 1" }
+        ]
+    }}`,
+	"/library/metadata/201/children": `{ "MediaContainer" : {
+        "Metadata": [
+           { "guid": "2", "title": "Episode 1" }
+        ]
+    }}`,
 }
