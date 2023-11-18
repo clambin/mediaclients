@@ -17,17 +17,17 @@ func TestPlexClient_GetStats(t *testing.T) {
 
 	titles := []string{"pilot", "movie 1", "movie 2", "movie 3"}
 	locations := []string{"lan", "wan", "lan", "lan"}
-	require.Len(t, sessions.Metadata, len(titles))
+	require.Len(t, sessions, len(titles))
 
 	for index, title := range titles {
-		assert.Equal(t, title, sessions.Metadata[index].Title)
-		assert.Equal(t, "Plex Web", sessions.Metadata[index].Player.Product)
-		assert.Equal(t, locations[index], sessions.Metadata[index].Session.Location)
+		assert.Equal(t, title, sessions[index].Title)
+		assert.Equal(t, "Plex Web", sessions[index].Player.Product)
+		assert.Equal(t, locations[index], sessions[index].Session.Location)
 
-		if sessions.Metadata[index].TranscodeSession.VideoDecision == "transcode" {
-			assert.NotZero(t, sessions.Metadata[index].TranscodeSession.Speed)
+		if sessions[index].TranscodeSession.VideoDecision == "transcode" {
+			assert.NotZero(t, sessions[index].TranscodeSession.Speed)
 		} else {
-			assert.Zero(t, sessions.Metadata[index].TranscodeSession.Speed)
+			assert.Zero(t, sessions[index].TranscodeSession.Speed)
 		}
 	}
 }

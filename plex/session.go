@@ -7,15 +7,17 @@ import (
 	"strings"
 )
 
-// Sessions contains the response of Plex's /status/sessions API
-type Sessions struct {
-	Size     int       `json:"size"`
-	Metadata []Session `json:"Metadata"`
-}
-
 // GetSessions retrieves session information from the server.
-func (c *Client) GetSessions(ctx context.Context) (Sessions, error) {
-	return call[Sessions](ctx, c, "/status/sessions")
+func (c *Client) GetSessions(ctx context.Context) ([]Session, error) {
+	type response struct {
+		Size     int       `json:"size"`
+		Metadata []Session `json:"Metadata"`
+	}
+	resp, err := call[response](ctx, c, "/status/sessions")
+	if err != nil {
+		return nil, err
+	}
+	return resp.Metadata, err
 }
 
 // Session contains one record in a Sessions
