@@ -34,17 +34,17 @@ func (c RadarrClient) GetURL() string {
 }
 
 // GetSystemStatus calls Radarr's  /api/v3/system/status endpoint. It returns the system status of the Radarr instance
-func (c RadarrClient) GetSystemStatus(ctx context.Context) (response RadarrSystemStatus, err error) {
+func (c RadarrClient) GetSystemStatus(ctx context.Context) (RadarrSystemStatus, error) {
 	return call[RadarrSystemStatus](ctx, c.Client, c.URL+radarrAPIPrefix+"/system/status")
 }
 
 // GetHealth calls Radarr's /api/v3/health endpoint. It returns the health of the Radarr instance
-func (c RadarrClient) GetHealth(ctx context.Context) (response []RadarrHealth, err error) {
+func (c RadarrClient) GetHealth(ctx context.Context) ([]RadarrHealth, error) {
 	return call[[]RadarrHealth](ctx, c.Client, c.URL+radarrAPIPrefix+"/health")
 }
 
 // GetCalendar calls Radarr's /api/v3/calendar endpoint. It returns all movies that will become available in the next 24 hours
-func (c RadarrClient) GetCalendar(ctx context.Context) (response []RadarrCalendar, err error) {
+func (c RadarrClient) GetCalendar(ctx context.Context) ([]RadarrCalendar, error) {
 	return call[[]RadarrCalendar](ctx, c.Client, c.URL+radarrAPIPrefix+"/calendar")
 }
 
@@ -81,11 +81,11 @@ func (c RadarrClient) GetQueue(ctx context.Context) ([]RadarrQueue, error) {
 }
 
 // GetMovies calls Radarr's /api/v3/movie endpoint. It returns all movies added to Radarr
-func (c RadarrClient) GetMovies(ctx context.Context) (response []RadarrMovie, err error) {
+func (c RadarrClient) GetMovies(ctx context.Context) ([]RadarrMovie, error) {
 	return call[[]RadarrMovie](ctx, c.Client, c.URL+radarrAPIPrefix+"/movie")
 }
 
 // GetMovieByID calls Radar's "/api/v3/movie/:movieID endpoint. It returns details for the specified movieID
-func (c RadarrClient) GetMovieByID(ctx context.Context, movieID int) (response RadarrMovie, err error) {
+func (c RadarrClient) GetMovieByID(ctx context.Context, movieID int) (RadarrMovie, error) {
 	return call[RadarrMovie](ctx, c.Client, c.URL+radarrAPIPrefix+"/movie/"+strconv.Itoa(movieID))
 }

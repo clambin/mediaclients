@@ -34,17 +34,17 @@ func (c SonarrClient) GetURL() string {
 }
 
 // GetSystemStatus calls Sonarr's /api/v3/system/status endpoint. It returns the system status of the Sonarr instance
-func (c SonarrClient) GetSystemStatus(ctx context.Context) (response SonarrSystemStatus, err error) {
+func (c SonarrClient) GetSystemStatus(ctx context.Context) (SonarrSystemStatus, error) {
 	return call[SonarrSystemStatus](ctx, c.Client, c.URL+sonarrAPIPrefix+"/system/status")
 }
 
 // GetHealth calls Sonarr's /api/v3/health endpoint. It returns the health of the Radarr instance
-func (c SonarrClient) GetHealth(ctx context.Context) (response []SonarrHealth, err error) {
+func (c SonarrClient) GetHealth(ctx context.Context) ([]SonarrHealth, error) {
 	return call[[]SonarrHealth](ctx, c.Client, c.URL+sonarrAPIPrefix+"/health")
 }
 
 // GetCalendar calls Sonarr's /api/v3/calendar endpoint. It returns all episodes that will become available in the next 24 hours
-func (c SonarrClient) GetCalendar(ctx context.Context) (response []SonarrCalendar, err error) {
+func (c SonarrClient) GetCalendar(ctx context.Context) ([]SonarrCalendar, error) {
 	return call[[]SonarrCalendar](ctx, c.Client, c.URL+sonarrAPIPrefix+"/calendar")
 }
 
@@ -81,16 +81,16 @@ func (c SonarrClient) GetQueue(ctx context.Context) ([]SonarrQueue, error) {
 }
 
 // GetSeries calls Sonarr's /api/v3/series endpoint. It returns all series added to Sonarr
-func (c SonarrClient) GetSeries(ctx context.Context) (response []SonarrSeries, err error) {
+func (c SonarrClient) GetSeries(ctx context.Context) ([]SonarrSeries, error) {
 	return call[[]SonarrSeries](ctx, c.Client, c.URL+sonarrAPIPrefix+"/series")
 }
 
 // GetSeriesByID calls Sonarr's /api/v3/series/:seriesID endpoint. It returns details for the specified seriesID
-func (c SonarrClient) GetSeriesByID(ctx context.Context, seriesID int) (response SonarrSeries, err error) {
+func (c SonarrClient) GetSeriesByID(ctx context.Context, seriesID int) (SonarrSeries, error) {
 	return call[SonarrSeries](ctx, c.Client, c.URL+sonarrAPIPrefix+"/series/"+strconv.Itoa(seriesID))
 }
 
 // GetEpisodeByID calls Sonarr's /api/v3/episode/:episodeID endpoint. It returns details for the specified responseID
-func (c SonarrClient) GetEpisodeByID(ctx context.Context, episodeID int) (response SonarrEpisode, err error) {
+func (c SonarrClient) GetEpisodeByID(ctx context.Context, episodeID int) (SonarrEpisode, error) {
 	return call[SonarrEpisode](ctx, c.Client, c.URL+sonarrAPIPrefix+"/episode/"+strconv.Itoa(episodeID))
 }
