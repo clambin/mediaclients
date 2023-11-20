@@ -2,8 +2,8 @@ package xxxarr
 
 import "time"
 
-// SonarrSystemStatusResponse contains the response of Sonarr's /api/v3/system/status endpoint
-type SonarrSystemStatusResponse struct {
+// SonarrSystemStatus contains the response of Sonarr's /api/v3/system/status endpoint
+type SonarrSystemStatus struct {
 	AppName                string    `json:"appName"`
 	Version                string    `json:"version"`
 	BuildTime              time.Time `json:"buildTime"`
@@ -33,16 +33,16 @@ type SonarrSystemStatusResponse struct {
 	PackageUpdateMechanism string    `json:"packageUpdateMechanism"`
 }
 
-// SonarrHealthResponse holders the response of Sonarr's /api/v3/system/health endpoint
-type SonarrHealthResponse struct {
+// SonarrHealth holders the response of Sonarr's /api/v3/system/health endpoint
+type SonarrHealth struct {
 	Source  string `json:"source"`
 	Type    string `json:"type"`
 	Message string `json:"message"`
 	WikiURL string `json:"wikiUrl"`
 }
 
-// SonarrCalendarResponse contains the response of Sonarr's /api/v3/calendar endpoint
-type SonarrCalendarResponse struct {
+// SonarrCalendar contains the response of Sonarr's /api/v3/calendar endpoint
+type SonarrCalendar struct {
 	SeriesID                 int       `json:"seriesId"`
 	TvdbID                   int       `json:"tvdbId"`
 	EpisodeFileID            int       `json:"episodeFileId"`
@@ -59,18 +59,8 @@ type SonarrCalendarResponse struct {
 	ID                       int       `json:"id"`
 }
 
-// SonarrQueueResponse contains the response of Sonarr's /api/v3/queue endpoint
-type SonarrQueueResponse struct {
-	Page          int                         `json:"page"`
-	PageSize      int                         `json:"pageSize"`
-	SortKey       string                      `json:"sortKey"`
-	SortDirection string                      `json:"sortDirection"`
-	TotalRecords  int                         `json:"totalRecords"`
-	Records       []SonarrQueueResponseRecord `json:"records"`
-}
-
-// SonarrQueueResponseRecord contains a Record from SonarrQueueResponse
-type SonarrQueueResponseRecord struct {
+// SonarrQueue contains a Record from SonarrQueueResponse
+type SonarrQueue struct {
 	SeriesID  int `json:"seriesId"`
 	EpisodeID int `json:"episodeId"`
 	Language  struct {
@@ -90,10 +80,10 @@ type SonarrQueueResponseRecord struct {
 			IsRepack bool `json:"isRepack"`
 		} `json:"revision"`
 	} `json:"quality"`
-	Size                    float64       `json:"size"`
+	Size                    int64         `json:"size"`
 	Title                   string        `json:"title"`
-	Sizeleft                float64       `json:"sizeleft"`
-	Timeleft                string        `json:"timeleft"`
+	SizeLeft                int64         `json:"sizeleft"`
+	TimeLeft                string        `json:"timeleft"`
 	EstimatedCompletionTime time.Time     `json:"estimatedCompletionTime"`
 	Status                  string        `json:"status"`
 	TrackedDownloadStatus   string        `json:"trackedDownloadStatus"`
@@ -107,8 +97,8 @@ type SonarrQueueResponseRecord struct {
 	ID                      int           `json:"id"`
 }
 
-// SonarrSeriesResponse contains the response of Sonarr's /api/v3/series endpoint
-type SonarrSeriesResponse struct {
+// SonarrSeries contains the response of Sonarr's /api/v3/series endpoint
+type SonarrSeries struct {
 	Title           string        `json:"title"`
 	AlternateTitles []interface{} `json:"alternateTitles"`
 	SortTitle       string        `json:"sortTitle"`
@@ -173,8 +163,8 @@ type SonarrSeriesResponse struct {
 	ID int `json:"id"`
 }
 
-// SonarrEpisodeResponse contains the response from Sonarr's /api/v3/episode endpoint
-type SonarrEpisodeResponse struct {
+// SonarrEpisode contains the response from Sonarr's /api/v3/episode endpoint
+type SonarrEpisode struct {
 	SeriesID      int       `json:"seriesId"`
 	TvdbID        int       `json:"tvdbId"`
 	EpisodeFileID int       `json:"episodeFileId"`
@@ -229,11 +219,11 @@ type SonarrEpisodeResponse struct {
 		LanguageCutoffNotMet bool `json:"languageCutoffNotMet"`
 		ID                   int  `json:"id"`
 	} `json:"episodeFile"`
-	HasFile                  bool                        `json:"hasFile"`
-	Monitored                bool                        `json:"monitored"`
-	AbsoluteEpisodeNumber    int                         `json:"absoluteEpisodeNumber"`
-	UnverifiedSceneNumbering bool                        `json:"unverifiedSceneNumbering"`
-	Series                   SonarrEpisodeResponseSeries `json:"series"`
+	HasFile                  bool                `json:"hasFile"`
+	Monitored                bool                `json:"monitored"`
+	AbsoluteEpisodeNumber    int                 `json:"absoluteEpisodeNumber"`
+	UnverifiedSceneNumbering bool                `json:"unverifiedSceneNumbering"`
+	Series                   SonarrEpisodeSeries `json:"series"`
 	Images                   []struct {
 		CoverType string `json:"coverType"`
 		URL       string `json:"url"`
@@ -241,8 +231,8 @@ type SonarrEpisodeResponse struct {
 	ID int `json:"id"`
 }
 
-// SonarrEpisodeResponseSeries contains the Series in a SonarrEpisodeResponse
-type SonarrEpisodeResponseSeries struct {
+// SonarrEpisodeSeries contains the Series in a SonarrEpisode
+type SonarrEpisodeSeries struct {
 	Title     string `json:"title"`
 	SortTitle string `json:"sortTitle"`
 	Status    string `json:"status"`

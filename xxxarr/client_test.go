@@ -1,4 +1,4 @@
-package xxxarr_test
+package xxxarr
 
 import (
 	"encoding/json"

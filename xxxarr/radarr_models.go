@@ -2,8 +2,8 @@ package xxxarr
 
 import "time"
 
-// RadarrSystemStatusResponse holds the response to Radarr's /api/v3/system/system endpoint
-type RadarrSystemStatusResponse struct {
+// RadarrSystemStatus holds the response to Radarr's /api/v3/system/system endpoint
+type RadarrSystemStatus struct {
 	AppName                string    `json:"appName"`
 	Version                string    `json:"version"`
 	BuildTime              time.Time `json:"buildTime"`
@@ -34,16 +34,16 @@ type RadarrSystemStatusResponse struct {
 	PackageUpdateMechanism string    `json:"packageUpdateMechanism"`
 }
 
-// RadarrHealthResponse holders the response of Radar's /api/v3/system/health endpoint
-type RadarrHealthResponse struct {
+// RadarrHealth holders the response of Radar's /api/v3/system/health endpoint
+type RadarrHealth struct {
 	Source  string `json:"source"`
 	Type    string `json:"type"`
 	Message string `json:"message"`
 	WikiURL string `json:"wikiUrl"`
 }
 
-// RadarrCalendarResponse holds the response of Radarr's /api/v3/calendar endpoint
-type RadarrCalendarResponse struct {
+// RadarrCalendar holds the response of Radarr's /api/v3/calendar endpoint
+type RadarrCalendar struct {
 	Title            string `json:"title"`
 	OriginalTitle    string `json:"originalTitle"`
 	OriginalLanguage struct {
@@ -109,8 +109,8 @@ type RadarrCalendarResponse struct {
 	ID         int     `json:"id"`
 }
 
-// RadarrMovieResponse holds the response of Radarr's /api/v3/movie endpoint
-type RadarrMovieResponse struct {
+// RadarrMovie holds the response of Radarr's /api/v3/movie endpoint
+type RadarrMovie struct {
 	Title            string `json:"title"`
 	OriginalTitle    string `json:"originalTitle"`
 	OriginalLanguage struct {
@@ -183,18 +183,8 @@ type RadarrMovieResponse struct {
 	DigitalRelease time.Time `json:"digitalRelease,omitempty"`
 }
 
-// RadarrQueueResponse contains the response to Radarr's /api/v3/queue endpoint
-type RadarrQueueResponse struct {
-	Page          int                         `json:"page"`
-	PageSize      int                         `json:"pageSize"`
-	SortKey       string                      `json:"sortKey"`
-	SortDirection string                      `json:"sortDirection"`
-	TotalRecords  int                         `json:"totalRecords"`
-	Records       []RadarrQueueResponseRecord `json:"records"`
-}
-
-// RadarrQueueResponseRecord contains one record from a RadarrQueueResponse
-type RadarrQueueResponseRecord struct {
+// RadarrQueue contains one record from a RadarrQueueResponse
+type RadarrQueue struct {
 	MovieID   int `json:"movieId"`
 	Languages []struct {
 		ID   int    `json:"id"`
@@ -217,8 +207,8 @@ type RadarrQueueResponseRecord struct {
 	CustomFormats           []interface{} `json:"customFormats"`
 	Size                    int64         `json:"size"`
 	Title                   string        `json:"title"`
-	Sizeleft                int64         `json:"sizeleft"`
-	Timeleft                string        `json:"timeleft"`
+	SizeLeft                int64         `json:"sizeleft"`
+	TimeLeft                string        `json:"timeleft"`
 	EstimatedCompletionTime time.Time     `json:"estimatedCompletionTime"`
 	Status                  string        `json:"status"`
 	TrackedDownloadStatus   string        `json:"trackedDownloadStatus"`
