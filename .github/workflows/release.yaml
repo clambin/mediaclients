@@ -21,7 +21,7 @@ jobs:
         run: |
           go vet ./...
           go test ./... -race -coverprofile=coverage.txt -covermode=atomic
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
         if: matrix.go-version == '1.21'
         with:
           file: ${{ matrix.module}}/coverage.txt
