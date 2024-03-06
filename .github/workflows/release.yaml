@@ -7,25 +7,9 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version:
-          - '1.21'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
-      - name: test
-        run: |
-          go vet ./...
-          go test ./... -race -coverprofile=coverage.txt -covermode=atomic
-      - uses: codecov/codecov-action@v4
-        if: matrix.go-version == '1.21'
-        with:
-          file: ${{ matrix.module}}/coverage.txt
-          token: ${{ secrets.CODECOV_TOKEN }}
+    uses: clambin/workflows/.github/workflows/libtest.yaml@main
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
   publish:
     needs: test
     runs-on: ubuntu-latest
