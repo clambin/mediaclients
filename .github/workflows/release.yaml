@@ -12,5 +12,3 @@ jobs:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
   publish:
     uses: clambin/workflows/.github/workflows/librelease.yaml@main
-    secrets:
-      codecov-token: ${{ secrets.CODECOV_TOKEN }}
