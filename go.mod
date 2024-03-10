@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.4
 
 require (
-	github.com/clambin/go-common/set v0.4.2
+	github.com/clambin/go-common/set v0.4.3
 	github.com/stretchr/testify v1.9.0
 )
 
