@@ -2,7 +2,6 @@ package xxxarr
 
 import (
 	"context"
-	"errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -130,6 +129,6 @@ func TestSonarrClient_BadOutput(t *testing.T) {
 	_, err := c.GetHealth(context.Background())
 	assert.Error(t, err)
 	var err2 *ErrInvalidJSON
-	assert.True(t, errors.As(err, &err2))
+	assert.ErrorAs(t, err, &err2)
 	assert.Equal(t, "bad output", string(err2.Body))
 }

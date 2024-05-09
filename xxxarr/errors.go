@@ -1,5 +1,7 @@
 package xxxarr
 
+import "errors"
+
 var _ error = &ErrInvalidJSON{}
 
 type ErrInvalidJSON struct {
@@ -12,8 +14,8 @@ func (e *ErrInvalidJSON) Error() string {
 }
 
 func (e *ErrInvalidJSON) Is(target error) bool {
-	_, ok := target.(*ErrInvalidJSON)
-	return ok
+	var err *ErrInvalidJSON
+	return errors.As(target, &err)
 }
 
 func (e *ErrInvalidJSON) Unwrap() error {
