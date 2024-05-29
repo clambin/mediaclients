@@ -1,6 +1,7 @@
 package xxxarr
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -24,19 +25,15 @@ func call[T any](ctx context.Context, client *http.Client, target string) (T, er
 		_ = resp.Body.Close()
 	}()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return response, fmt.Errorf("read: %w", err)
-	}
-
 	if resp.StatusCode != http.StatusOK {
 		return response, fmt.Errorf("unexpected http status: %s", resp.Status)
 	}
 
-	if err = json.Unmarshal(body, &response); err != nil {
+	var body bytes.Buffer
+	if err = json.NewDecoder(io.TeeReader(resp.Body, &body)).Decode(&response); err != nil {
 		err = &ErrInvalidJSON{
 			Err:  err,
-			Body: body,
+			Body: body.Bytes(),
 		}
 	}
 	return response, err
