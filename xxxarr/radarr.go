@@ -12,6 +12,9 @@ type RadarrClient struct {
 	URL    string
 }
 
+// NewRadarrClient returns a new Radarr client
+//
+// deprecated
 func NewRadarrClient(url, apiKey string, roundtripper http.RoundTripper) *RadarrClient {
 	if roundtripper == nil {
 		roundtripper = http.DefaultTransport

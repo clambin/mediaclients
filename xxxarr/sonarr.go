@@ -12,6 +12,9 @@ type SonarrClient struct {
 	URL    string
 }
 
+// NewSonarrClient returns a new Sonarr client
+//
+// deprecated
 func NewSonarrClient(url, apiKey string, roundtripper http.RoundTripper) *SonarrClient {
 	if roundtripper == nil {
 		roundtripper = http.DefaultTransport
