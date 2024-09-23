@@ -4,11 +4,10 @@ info:
   version: 0.0.0
 actions:
   # / gives error:  path '/' has 0 positional parameters, but spec has 1 declared
-- target: $.paths['/']
-  remove: true
+  - target: $.paths['/']
+    remove: true
   # generated code can't parse wikiUrl
-- target: $.components.schemas.HealthResource.properties.wikiUrl
-  #remove: true
-  update:
-    $ref: ""
-    type: string
+  - target: $.components.schemas.HealthResource.properties.wikiUrl
+    update:
+      $ref: ""
+      type: string

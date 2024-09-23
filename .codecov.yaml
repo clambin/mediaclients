@@ -1,0 +1,4 @@
+ignore:
+  - "prowlarr/*.go"
+  - "radarr/*.go"
+  - "sonarr/*.go"

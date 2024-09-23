@@ -10,6 +10,9 @@ type ProwlarrClient struct {
 	HTTPClient *http.Client
 }
 
+// NewProwlarrClient returns a new ProwlarrClient
+//
+// deprecated
 func NewProwlarrClient(url, apikey string, roundtripper http.RoundTripper) *ProwlarrClient {
 	if roundtripper == nil {
 		roundtripper = http.DefaultTransport

@@ -1,0 +1,8 @@
+package: prowlarr
+output: client.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  overlay:
+    path: overlay.yaml
