@@ -15,6 +15,9 @@ type Client struct {
 	URL        string
 }
 
+// NewClient returns a new Transmission Client
+//
+// deprecated
 func NewClient(url string, roundTripper http.RoundTripper) *Client {
 	if roundTripper == nil {
 		roundTripper = http.DefaultTransport
