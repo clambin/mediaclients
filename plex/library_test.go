@@ -12,7 +12,7 @@ import (
 )
 
 func TestClient_GetLibraries(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(testutil.Handler))
+	testServer := httptest.NewServer(&testutil.TestServer)
 	defer testServer.Close()
 
 	c := plex.New("user@example.com", "somepassword", "", "", testServer.URL, nil)

@@ -2,6 +2,8 @@
 ![Test](https://github.com/clambin/mediaclients/workflows/Test/badge.svg)
 [![GoDoc](https://pkg.go.dev/badge/github.com/clambin/mediaclients?utm_source=godoc)](http://pkg.go.dev/github.com/clambin/mediaclients)
 
+Go client libraries for Sonarr, Radarr & Prowlarr, generated from their OpenAPI spec.
+
 ## Authors
 
 * **Christophe Lambin**

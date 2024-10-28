@@ -306,8 +306,10 @@ const (
 	Fr TMDbCountryCode = "fr"
 	Gb TMDbCountryCode = "gb"
 	Ie TMDbCountryCode = "ie"
+	In TMDbCountryCode = "in"
 	It TMDbCountryCode = "it"
 	Nz TMDbCountryCode = "nz"
+	Ro TMDbCountryCode = "ro"
 	Us TMDbCountryCode = "us"
 )
 

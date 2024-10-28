@@ -13,7 +13,7 @@ import (
 func TestAuthenticator_RoundTrip(t *testing.T) {
 	authServer := httptest.NewServer(http.HandlerFunc(testutil.AuthHandler))
 
-	server := httptest.NewServer(testutil.WithToken("some_token", testutil.Handler))
+	server := httptest.NewServer(testutil.WithToken("some_token", &testutil.TestServer))
 	defer server.Client()
 
 	c := New("user@example.com", "somepassword", "", "", server.URL, nil)
@@ -45,7 +45,7 @@ func TestAuthenticator_Custom_RoundTripper(t *testing.T) {
 	authServer := httptest.NewServer(http.HandlerFunc(testutil.AuthHandler))
 	defer authServer.Close()
 
-	server := httptest.NewServer(testutil.WithToken("some_token", testutil.Handler))
+	server := httptest.NewServer(testutil.WithToken("some_token", &testutil.TestServer))
 	defer server.Client()
 
 	c := New("user@example.com", "somepassword", "", "", server.URL, &dummyRoundTripper{next: http.DefaultTransport})
