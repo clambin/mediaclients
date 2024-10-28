@@ -39,7 +39,7 @@ func TestClient_Decode_Failure(t *testing.T) {
 
 func makeClientAndServer(h http.Handler) (*plex.Client, *httptest.Server) {
 	if h == nil {
-		h = http.HandlerFunc(testutil.Handler)
+		h = &testutil.TestServer
 	}
 	s := httptest.NewServer(h)
 	c := plex.New("user@example.com", "somepassword", "", "", s.URL, nil)

@@ -6,6 +6,7 @@ toolchain go1.22.7
 
 require (
 	github.com/clambin/go-common/set v0.4.3
+	github.com/clambin/go-common/testutils v0.2.0
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/stretchr/testify v1.9.0
 )
