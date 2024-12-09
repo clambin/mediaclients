@@ -500,6 +500,7 @@ type HostConfigResource struct {
 	SslCertPassword           *string                     `json:"sslCertPassword"`
 	SslCertPath               *string                     `json:"sslCertPath"`
 	SslPort                   *int32                      `json:"sslPort,omitempty"`
+	TrustCgnatIpAddresses     *bool                       `json:"trustCgnatIpAddresses,omitempty"`
 	UpdateAutomatically       *bool                       `json:"updateAutomatically,omitempty"`
 	UpdateMechanism           *UpdateMechanism            `json:"updateMechanism,omitempty"`
 	UpdateScriptPath          *string                     `json:"updateScriptPath"`

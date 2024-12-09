@@ -255,6 +255,20 @@ const (
 	Workprint QualitySource = "workprint"
 )
 
+// Defines values for QueueStatus.
+const (
+	QueueStatusCompleted                 QueueStatus = "completed"
+	QueueStatusDelay                     QueueStatus = "delay"
+	QueueStatusDownloadClientUnavailable QueueStatus = "downloadClientUnavailable"
+	QueueStatusDownloading               QueueStatus = "downloading"
+	QueueStatusFailed                    QueueStatus = "failed"
+	QueueStatusFallback                  QueueStatus = "fallback"
+	QueueStatusPaused                    QueueStatus = "paused"
+	QueueStatusQueued                    QueueStatus = "queued"
+	QueueStatusUnknown                   QueueStatus = "unknown"
+	QueueStatusWarning                   QueueStatus = "warning"
+)
+
 // Defines values for RatingType.
 const (
 	RatingTypeCritic RatingType = "critic"
@@ -315,14 +329,14 @@ const (
 
 // Defines values for TrackedDownloadState.
 const (
-	TrackedDownloadStateDownloading   TrackedDownloadState = "downloading"
-	TrackedDownloadStateFailed        TrackedDownloadState = "failed"
-	TrackedDownloadStateFailedPending TrackedDownloadState = "failedPending"
-	TrackedDownloadStateIgnored       TrackedDownloadState = "ignored"
-	TrackedDownloadStateImportBlocked TrackedDownloadState = "importBlocked"
-	TrackedDownloadStateImportPending TrackedDownloadState = "importPending"
-	TrackedDownloadStateImported      TrackedDownloadState = "imported"
-	TrackedDownloadStateImporting     TrackedDownloadState = "importing"
+	Downloading   TrackedDownloadState = "downloading"
+	Failed        TrackedDownloadState = "failed"
+	FailedPending TrackedDownloadState = "failedPending"
+	Ignored       TrackedDownloadState = "ignored"
+	ImportBlocked TrackedDownloadState = "importBlocked"
+	ImportPending TrackedDownloadState = "importPending"
+	Imported      TrackedDownloadState = "imported"
+	Importing     TrackedDownloadState = "importing"
 )
 
 // Defines values for TrackedDownloadStatus.
@@ -781,6 +795,7 @@ type HostConfigResource struct {
 	SslCertPassword           *string                     `json:"sslCertPassword"`
 	SslCertPath               *string                     `json:"sslCertPath"`
 	SslPort                   *int32                      `json:"sslPort,omitempty"`
+	TrustCgnatIpAddresses     *bool                       `json:"trustCgnatIpAddresses,omitempty"`
 	UpdateAutomatically       *bool                       `json:"updateAutomatically,omitempty"`
 	UpdateMechanism           *UpdateMechanism            `json:"updateMechanism,omitempty"`
 	UpdateScriptPath          *string                     `json:"updateScriptPath"`
@@ -1387,30 +1402,32 @@ type QueueBulkResource struct {
 
 // QueueResource defines model for QueueResource.
 type QueueResource struct {
-	Added                               *time.Time                      `json:"added"`
-	CustomFormatScore                   *int32                          `json:"customFormatScore,omitempty"`
-	CustomFormats                       *[]CustomFormatResource         `json:"customFormats"`
-	DownloadClient                      *string                         `json:"downloadClient"`
-	DownloadClientHasPostImportCategory *bool                           `json:"downloadClientHasPostImportCategory,omitempty"`
-	DownloadId                          *string                         `json:"downloadId"`
-	ErrorMessage                        *string                         `json:"errorMessage"`
-	EstimatedCompletionTime             *time.Time                      `json:"estimatedCompletionTime"`
-	Id                                  *int32                          `json:"id,omitempty"`
-	Indexer                             *string                         `json:"indexer"`
-	Languages                           *[]Language                     `json:"languages"`
-	Movie                               *MovieResource                  `json:"movie,omitempty"`
-	MovieId                             *int32                          `json:"movieId"`
-	OutputPath                          *string                         `json:"outputPath"`
-	Protocol                            *DownloadProtocol               `json:"protocol,omitempty"`
-	Quality                             *QualityModel                   `json:"quality,omitempty"`
-	Size                                *float64                        `json:"size,omitempty"`
-	Sizeleft                            *float64                        `json:"sizeleft,omitempty"`
-	Status                              *string                         `json:"status"`
-	StatusMessages                      *[]TrackedDownloadStatusMessage `json:"statusMessages"`
-	Timeleft                            *string                         `json:"timeleft"`
-	Title                               *string                         `json:"title"`
-	TrackedDownloadState                *TrackedDownloadState           `json:"trackedDownloadState,omitempty"`
-	TrackedDownloadStatus               *TrackedDownloadStatus          `json:"trackedDownloadStatus,omitempty"`
+	Added                               *time.Time              `json:"added"`
+	CustomFormatScore                   *int32                  `json:"customFormatScore,omitempty"`
+	CustomFormats                       *[]CustomFormatResource `json:"customFormats"`
+	DownloadClient                      *string                 `json:"downloadClient"`
+	DownloadClientHasPostImportCategory *bool                   `json:"downloadClientHasPostImportCategory,omitempty"`
+	DownloadId                          *string                 `json:"downloadId"`
+	ErrorMessage                        *string                 `json:"errorMessage"`
+	EstimatedCompletionTime             *time.Time              `json:"estimatedCompletionTime"`
+	Id                                  *int32                  `json:"id,omitempty"`
+	Indexer                             *string                 `json:"indexer"`
+	Languages                           *[]Language             `json:"languages"`
+	Movie                               *MovieResource          `json:"movie,omitempty"`
+	MovieId                             *int32                  `json:"movieId"`
+	OutputPath                          *string                 `json:"outputPath"`
+	Protocol                            *DownloadProtocol       `json:"protocol,omitempty"`
+	Quality                             *QualityModel           `json:"quality,omitempty"`
+	Size                                *float64                `json:"size,omitempty"`
+	// Deprecated:
+	Sizeleft       *float64                        `json:"sizeleft,omitempty"`
+	Status         *QueueStatus                    `json:"status,omitempty"`
+	StatusMessages *[]TrackedDownloadStatusMessage `json:"statusMessages"`
+	// Deprecated:
+	Timeleft              *string                `json:"timeleft"`
+	Title                 *string                `json:"title"`
+	TrackedDownloadState  *TrackedDownloadState  `json:"trackedDownloadState,omitempty"`
+	TrackedDownloadStatus *TrackedDownloadStatus `json:"trackedDownloadStatus,omitempty"`
 }
 
 // QueueResourcePagingResource defines model for QueueResourcePagingResource.
@@ -1422,6 +1439,9 @@ type QueueResourcePagingResource struct {
 	SortKey       *string          `json:"sortKey"`
 	TotalRecords  *int32           `json:"totalRecords,omitempty"`
 }
+
+// QueueStatus defines model for QueueStatus.
+type QueueStatus string
 
 // QueueStatusResource defines model for QueueStatusResource.
 type QueueStatusResource struct {
@@ -1925,9 +1945,6 @@ type GetApiV3MovieParams struct {
 	LanguageId         *int32 `form:"languageId,omitempty" json:"languageId,omitempty"`
 }
 
-// PostApiV3MovieImportApplicationWildcardPlusJSONBody defines parameters for PostApiV3MovieImport.
-type PostApiV3MovieImportApplicationWildcardPlusJSONBody = []MovieResource
-
 // PostApiV3MovieImportJSONBody defines parameters for PostApiV3MovieImport.
 type PostApiV3MovieImportJSONBody = []MovieResource
 
@@ -2000,7 +2017,8 @@ type GetApiV3QueueParams struct {
 	MovieIds                 *[]int32          `form:"movieIds,omitempty" json:"movieIds,omitempty"`
 	Protocol                 *DownloadProtocol `form:"protocol,omitempty" json:"protocol,omitempty"`
 	Languages                *[]int32          `form:"languages,omitempty" json:"languages,omitempty"`
-	Quality                  *int32            `form:"quality,omitempty" json:"quality,omitempty"`
+	Quality                  *[]int32          `form:"quality,omitempty" json:"quality,omitempty"`
+	Status                   *[]QueueStatus    `form:"status,omitempty" json:"status,omitempty"`
 }
 
 // DeleteApiV3QueueBulkParams defines parameters for DeleteApiV3QueueBulk.
@@ -2255,9 +2273,6 @@ type PutApiV3MovieEditorApplicationWildcardPlusJSONRequestBody = MovieEditorReso
 
 // PutApiV3MovieEditorJSONRequestBody defines body for PutApiV3MovieEditor for application/json ContentType.
 type PutApiV3MovieEditorJSONRequestBody = MovieEditorResource
-
-// PostApiV3MovieImportApplicationWildcardPlusJSONRequestBody defines body for PostApiV3MovieImport for application/*+json ContentType.
-type PostApiV3MovieImportApplicationWildcardPlusJSONRequestBody = PostApiV3MovieImportApplicationWildcardPlusJSONBody
 
 // PostApiV3MovieImportJSONRequestBody defines body for PostApiV3MovieImport for application/json ContentType.
 type PostApiV3MovieImportJSONRequestBody = PostApiV3MovieImportJSONBody
@@ -2990,8 +3005,6 @@ type ClientInterface interface {
 
 	// PostApiV3MovieImportWithBody request with any body
 	PostApiV3MovieImportWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	PostApiV3MovieImportWithApplicationWildcardPlusJSONBody(ctx context.Context, body PostApiV3MovieImportApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PostApiV3MovieImport(ctx context.Context, body PostApiV3MovieImportJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -5810,18 +5823,6 @@ func (c *Client) PutApiV3MovieEditor(ctx context.Context, body PutApiV3MovieEdit
 
 func (c *Client) PostApiV3MovieImportWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPostApiV3MovieImportRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PostApiV3MovieImportWithApplicationWildcardPlusJSONBody(ctx context.Context, body PostApiV3MovieImportApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiV3MovieImportRequestWithApplicationWildcardPlusJSONBody(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -13821,17 +13822,6 @@ func NewPutApiV3MovieEditorRequestWithBody(server string, contentType string, bo
 	return req, nil
 }
 
-// NewPostApiV3MovieImportRequestWithApplicationWildcardPlusJSONBody calls the generic PostApiV3MovieImport builder with application/*+json body
-func NewPostApiV3MovieImportRequestWithApplicationWildcardPlusJSONBody(server string, body PostApiV3MovieImportApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPostApiV3MovieImportRequestWithBody(server, "application/*+json", bodyReader)
-}
-
 // NewPostApiV3MovieImportRequest calls the generic PostApiV3MovieImport builder with application/json body
 func NewPostApiV3MovieImportRequest(server string, body PostApiV3MovieImportJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -15440,6 +15430,22 @@ func NewGetApiV3QueueRequest(server string, params *GetApiV3QueueParams) (*http.
 		if params.Quality != nil {
 
 			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "quality", runtime.ParamLocationQuery, *params.Quality); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Status != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "status", runtime.ParamLocationQuery, *params.Status); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -18311,8 +18317,6 @@ type ClientWithResponsesInterface interface {
 
 	// PostApiV3MovieImportWithBodyWithResponse request with any body
 	PostApiV3MovieImportWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV3MovieImportResponse, error)
-
-	PostApiV3MovieImportWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PostApiV3MovieImportApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3MovieImportResponse, error)
 
 	PostApiV3MovieImportWithResponse(ctx context.Context, body PostApiV3MovieImportJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3MovieImportResponse, error)
 
@@ -21823,6 +21827,7 @@ func (r PutApiV3MovieEditorResponse) StatusCode() int {
 type PostApiV3MovieImportResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *[]MovieResource
 }
 
 // Status returns HTTPResponse.Status
@@ -21844,6 +21849,7 @@ func (r PostApiV3MovieImportResponse) StatusCode() int {
 type GetApiV3MovieLookupResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *[]MovieResource
 }
 
 // Status returns HTTPResponse.Status
@@ -21865,6 +21871,7 @@ func (r GetApiV3MovieLookupResponse) StatusCode() int {
 type GetApiV3MovieLookupImdbResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *MovieResource
 }
 
 // Status returns HTTPResponse.Status
@@ -21886,6 +21893,7 @@ func (r GetApiV3MovieLookupImdbResponse) StatusCode() int {
 type GetApiV3MovieLookupTmdbResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *MovieResource
 }
 
 // Status returns HTTPResponse.Status
@@ -25512,14 +25520,6 @@ func (c *ClientWithResponses) PutApiV3MovieEditorWithResponse(ctx context.Contex
 // PostApiV3MovieImportWithBodyWithResponse request with arbitrary body returning *PostApiV3MovieImportResponse
 func (c *ClientWithResponses) PostApiV3MovieImportWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV3MovieImportResponse, error) {
 	rsp, err := c.PostApiV3MovieImportWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostApiV3MovieImportResponse(rsp)
-}
-
-func (c *ClientWithResponses) PostApiV3MovieImportWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PostApiV3MovieImportApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3MovieImportResponse, error) {
-	rsp, err := c.PostApiV3MovieImportWithApplicationWildcardPlusJSONBody(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -30079,6 +30079,16 @@ func ParsePostApiV3MovieImportResponse(rsp *http.Response) (*PostApiV3MovieImpor
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []MovieResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -30093,6 +30103,16 @@ func ParseGetApiV3MovieLookupResponse(rsp *http.Response) (*GetApiV3MovieLookupR
 	response := &GetApiV3MovieLookupResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []MovieResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -30111,6 +30131,16 @@ func ParseGetApiV3MovieLookupImdbResponse(rsp *http.Response) (*GetApiV3MovieLoo
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MovieResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -30125,6 +30155,16 @@ func ParseGetApiV3MovieLookupTmdbResponse(rsp *http.Response) (*GetApiV3MovieLoo
 	response := &GetApiV3MovieLookupTmdbResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MovieResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
