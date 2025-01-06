@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -185,21 +186,24 @@ type templateVariables struct {
 	ApiVersion string
 }
 
+//go:embed client.go.tmpl
+var templates embed.FS
+
 func writeFile(baseDir string, cfg clientConfig) error {
+	tmpl, err := templates.ReadFile("client.go.tmpl")
+	if err != nil {
+		return fmt.Errorf("read template: %w", err)
+	}
+
 	f, err := os.OpenFile(filepath.Join(baseDir, cfg.clientSource), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = f.Close() }()
 
-	tmpl, err := template.New("bump").Parse(clientFileTemplate)
+	t, err := template.New("bump").Parse(string(tmpl))
 	if err != nil {
 		return fmt.Errorf("parse template: %w", err)
 	}
-	return tmpl.Execute(f, cfg.templateVariables)
+	return t.Execute(f, cfg.templateVariables)
 }
-
-const clientFileTemplate = `package {{.Package}}
-
-//go:generate oapi-codegen -config config.yaml https://raw.githubusercontent.com/{{.App}}/{{.App}}/refs/tags/{{.Tag}}/src/{{.App}}.Api.{{.ApiVersion}}/openapi.json
-`

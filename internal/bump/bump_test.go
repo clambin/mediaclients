@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"flag"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+var update = flag.Bool("update", false, "update .golden files")
 
 func TestClientType_getTag(t *testing.T) {
 	tests := []struct {
@@ -70,7 +74,7 @@ func Test_writeFile(t *testing.T) {
 		t.Fatalf("failed to create tmp directory: %v", err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(tmp) })
-	err = writeFile(tmp, clientConfig{
+	cfg := clientConfig{
 		templateVariables: templateVariables{
 			Package:    "foo",
 			App:        "Foo",
@@ -78,42 +82,29 @@ func Test_writeFile(t *testing.T) {
 			ApiVersion: "V1",
 		},
 		clientSource: "client.gen.go",
-	})
+	}
+	err = writeFile(tmp, cfg)
 	if err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
 
-	got, err := os.ReadFile(filepath.Join(tmp, "client.gen.go"))
+	got, err := os.ReadFile(filepath.Join(tmp, cfg.clientSource))
 	if err != nil {
 		t.Fatalf("failed to read file: %v", err)
 	}
-	const want = `package foo
 
-//go:generate oapi-codegen -config config.yaml https://raw.githubusercontent.com/Foo/Foo/refs/tags/v1.2.3/src/Foo.Api.V1/openapi.json
-`
-	if want != string(got) {
-		t.Errorf("writeFile() got = %v, want %v", string(got), want)
+	gp := filepath.Join("testdata", "client.gen.go.golden")
+	if *update {
+		if err = os.WriteFile(gp, got, os.ModePerm); err != nil {
+			t.Fatalf("failed to write file: %v", err)
+		}
+	}
+	want, err := os.ReadFile(gp)
+	if err != nil {
+		t.Fatalf("failed to read file: %v", err)
+	}
+
+	if !bytes.Equal(want, got) {
+		t.Errorf("writeFile() got = %v, want %v", string(got), string(want))
 	}
 }
-
-/*
-func TestWriteClientFile(t *testing.T) {
-	var buf bytes.Buffer
-	vars := templateVariables{
-		Package:    "foo",
-		App:        "foo",
-		Tag:        "v0.1",
-		ApiVersion: "V1",
-	}
-	if err := writeClientFile(&buf, vars); err != nil {
-		t.Fatal(err)
-	}
-	want := `package foo
-
-//go:generate oapi-codegen -config config.yaml https://raw.githubusercontent.com/foo/foo/refs/tags/v0.1/src/foo.Api.V1/openapi.json
-`
-	if buf.String() != want {
-		t.Errorf("got %q, want %q", buf.String(), want)
-	}
-}
-*/

@@ -1,4 +1,4 @@
 ignore:
-  - "prowlarr/*.go"
-  - "radarr/*.go"
-  - "sonarr/*.go"
+  - "prowlarr/client.gen.go"
+  - "radarr/client.gen.go"
+  - "sonarr/client.gen.go"
