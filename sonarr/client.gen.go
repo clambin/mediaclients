@@ -751,6 +751,7 @@ type HostConfigResource struct {
 	SslCertPassword           *string                     `json:"sslCertPassword"`
 	SslCertPath               *string                     `json:"sslCertPath"`
 	SslPort                   *int32                      `json:"sslPort,omitempty"`
+	TrustCgnatIpAddresses     *bool                       `json:"trustCgnatIpAddresses,omitempty"`
 	UpdateAutomatically       *bool                       `json:"updateAutomatically,omitempty"`
 	UpdateMechanism           *UpdateMechanism            `json:"updateMechanism,omitempty"`
 	UpdateScriptPath          *string                     `json:"updateScriptPath"`
@@ -824,6 +825,12 @@ type ImportListResource struct {
 
 // ImportListType defines model for ImportListType.
 type ImportListType string
+
+// ImportRejectionResource defines model for ImportRejectionResource.
+type ImportRejectionResource struct {
+	Reason *string        `json:"reason"`
+	Type   *RejectionType `json:"type,omitempty"`
+}
 
 // IndexerBulkResource defines model for IndexerBulkResource.
 type IndexerBulkResource struct {
@@ -951,45 +958,45 @@ type LogResourcePagingResource struct {
 
 // ManualImportReprocessResource defines model for ManualImportReprocessResource.
 type ManualImportReprocessResource struct {
-	CustomFormatScore *int32                  `json:"customFormatScore,omitempty"`
-	CustomFormats     *[]CustomFormatResource `json:"customFormats"`
-	DownloadId        *string                 `json:"downloadId"`
-	EpisodeIds        *[]int32                `json:"episodeIds"`
-	Episodes          *[]EpisodeResource      `json:"episodes"`
-	Id                *int32                  `json:"id,omitempty"`
-	IndexerFlags      *int32                  `json:"indexerFlags,omitempty"`
-	Languages         *[]Language             `json:"languages"`
-	Path              *string                 `json:"path"`
-	Quality           *QualityModel           `json:"quality,omitempty"`
-	Rejections        *[]Rejection            `json:"rejections"`
-	ReleaseGroup      *string                 `json:"releaseGroup"`
-	ReleaseType       *ReleaseType            `json:"releaseType,omitempty"`
-	SeasonNumber      *int32                  `json:"seasonNumber"`
-	SeriesId          *int32                  `json:"seriesId,omitempty"`
+	CustomFormatScore *int32                     `json:"customFormatScore,omitempty"`
+	CustomFormats     *[]CustomFormatResource    `json:"customFormats"`
+	DownloadId        *string                    `json:"downloadId"`
+	EpisodeIds        *[]int32                   `json:"episodeIds"`
+	Episodes          *[]EpisodeResource         `json:"episodes"`
+	Id                *int32                     `json:"id,omitempty"`
+	IndexerFlags      *int32                     `json:"indexerFlags,omitempty"`
+	Languages         *[]Language                `json:"languages"`
+	Path              *string                    `json:"path"`
+	Quality           *QualityModel              `json:"quality,omitempty"`
+	Rejections        *[]ImportRejectionResource `json:"rejections"`
+	ReleaseGroup      *string                    `json:"releaseGroup"`
+	ReleaseType       *ReleaseType               `json:"releaseType,omitempty"`
+	SeasonNumber      *int32                     `json:"seasonNumber"`
+	SeriesId          *int32                     `json:"seriesId,omitempty"`
 }
 
 // ManualImportResource defines model for ManualImportResource.
 type ManualImportResource struct {
-	CustomFormatScore *int32                  `json:"customFormatScore,omitempty"`
-	CustomFormats     *[]CustomFormatResource `json:"customFormats"`
-	DownloadId        *string                 `json:"downloadId"`
-	EpisodeFileId     *int32                  `json:"episodeFileId"`
-	Episodes          *[]EpisodeResource      `json:"episodes"`
-	FolderName        *string                 `json:"folderName"`
-	Id                *int32                  `json:"id,omitempty"`
-	IndexerFlags      *int32                  `json:"indexerFlags,omitempty"`
-	Languages         *[]Language             `json:"languages"`
-	Name              *string                 `json:"name"`
-	Path              *string                 `json:"path"`
-	Quality           *QualityModel           `json:"quality,omitempty"`
-	QualityWeight     *int32                  `json:"qualityWeight,omitempty"`
-	Rejections        *[]Rejection            `json:"rejections"`
-	RelativePath      *string                 `json:"relativePath"`
-	ReleaseGroup      *string                 `json:"releaseGroup"`
-	ReleaseType       *ReleaseType            `json:"releaseType,omitempty"`
-	SeasonNumber      *int32                  `json:"seasonNumber"`
-	Series            *SeriesResource         `json:"series,omitempty"`
-	Size              *int64                  `json:"size,omitempty"`
+	CustomFormatScore *int32                     `json:"customFormatScore,omitempty"`
+	CustomFormats     *[]CustomFormatResource    `json:"customFormats"`
+	DownloadId        *string                    `json:"downloadId"`
+	EpisodeFileId     *int32                     `json:"episodeFileId"`
+	Episodes          *[]EpisodeResource         `json:"episodes"`
+	FolderName        *string                    `json:"folderName"`
+	Id                *int32                     `json:"id,omitempty"`
+	IndexerFlags      *int32                     `json:"indexerFlags,omitempty"`
+	Languages         *[]Language                `json:"languages"`
+	Name              *string                    `json:"name"`
+	Path              *string                    `json:"path"`
+	Quality           *QualityModel              `json:"quality,omitempty"`
+	QualityWeight     *int32                     `json:"qualityWeight,omitempty"`
+	Rejections        *[]ImportRejectionResource `json:"rejections"`
+	RelativePath      *string                    `json:"relativePath"`
+	ReleaseGroup      *string                    `json:"releaseGroup"`
+	ReleaseType       *ReleaseType               `json:"releaseType,omitempty"`
+	SeasonNumber      *int32                     `json:"seasonNumber"`
+	Series            *SeriesResource            `json:"series,omitempty"`
+	Size              *int64                     `json:"size,omitempty"`
 }
 
 // MediaCover defines model for MediaCover.
@@ -1271,34 +1278,36 @@ type QueueBulkResource struct {
 
 // QueueResource defines model for QueueResource.
 type QueueResource struct {
-	Added                               *time.Time                      `json:"added"`
-	CustomFormatScore                   *int32                          `json:"customFormatScore,omitempty"`
-	CustomFormats                       *[]CustomFormatResource         `json:"customFormats"`
-	DownloadClient                      *string                         `json:"downloadClient"`
-	DownloadClientHasPostImportCategory *bool                           `json:"downloadClientHasPostImportCategory,omitempty"`
-	DownloadId                          *string                         `json:"downloadId"`
-	Episode                             *EpisodeResource                `json:"episode,omitempty"`
-	EpisodeHasFile                      *bool                           `json:"episodeHasFile,omitempty"`
-	EpisodeId                           *int32                          `json:"episodeId"`
-	ErrorMessage                        *string                         `json:"errorMessage"`
-	EstimatedCompletionTime             *time.Time                      `json:"estimatedCompletionTime"`
-	Id                                  *int32                          `json:"id,omitempty"`
-	Indexer                             *string                         `json:"indexer"`
-	Languages                           *[]Language                     `json:"languages"`
-	OutputPath                          *string                         `json:"outputPath"`
-	Protocol                            *DownloadProtocol               `json:"protocol,omitempty"`
-	Quality                             *QualityModel                   `json:"quality,omitempty"`
-	SeasonNumber                        *int32                          `json:"seasonNumber"`
-	Series                              *SeriesResource                 `json:"series,omitempty"`
-	SeriesId                            *int32                          `json:"seriesId"`
-	Size                                *float64                        `json:"size,omitempty"`
-	Sizeleft                            *float64                        `json:"sizeleft,omitempty"`
-	Status                              *QueueStatus                    `json:"status,omitempty"`
-	StatusMessages                      *[]TrackedDownloadStatusMessage `json:"statusMessages"`
-	Timeleft                            *string                         `json:"timeleft"`
-	Title                               *string                         `json:"title"`
-	TrackedDownloadState                *TrackedDownloadState           `json:"trackedDownloadState,omitempty"`
-	TrackedDownloadStatus               *TrackedDownloadStatus          `json:"trackedDownloadStatus,omitempty"`
+	Added                               *time.Time              `json:"added"`
+	CustomFormatScore                   *int32                  `json:"customFormatScore,omitempty"`
+	CustomFormats                       *[]CustomFormatResource `json:"customFormats"`
+	DownloadClient                      *string                 `json:"downloadClient"`
+	DownloadClientHasPostImportCategory *bool                   `json:"downloadClientHasPostImportCategory,omitempty"`
+	DownloadId                          *string                 `json:"downloadId"`
+	Episode                             *EpisodeResource        `json:"episode,omitempty"`
+	EpisodeHasFile                      *bool                   `json:"episodeHasFile,omitempty"`
+	EpisodeId                           *int32                  `json:"episodeId"`
+	ErrorMessage                        *string                 `json:"errorMessage"`
+	EstimatedCompletionTime             *time.Time              `json:"estimatedCompletionTime"`
+	Id                                  *int32                  `json:"id,omitempty"`
+	Indexer                             *string                 `json:"indexer"`
+	Languages                           *[]Language             `json:"languages"`
+	OutputPath                          *string                 `json:"outputPath"`
+	Protocol                            *DownloadProtocol       `json:"protocol,omitempty"`
+	Quality                             *QualityModel           `json:"quality,omitempty"`
+	SeasonNumber                        *int32                  `json:"seasonNumber"`
+	Series                              *SeriesResource         `json:"series,omitempty"`
+	SeriesId                            *int32                  `json:"seriesId"`
+	Size                                *float64                `json:"size,omitempty"`
+	// Deprecated:
+	Sizeleft       *float64                        `json:"sizeleft,omitempty"`
+	Status         *QueueStatus                    `json:"status,omitempty"`
+	StatusMessages *[]TrackedDownloadStatusMessage `json:"statusMessages"`
+	// Deprecated:
+	Timeleft              *string                `json:"timeleft"`
+	Title                 *string                `json:"title"`
+	TrackedDownloadState  *TrackedDownloadState  `json:"trackedDownloadState,omitempty"`
+	TrackedDownloadStatus *TrackedDownloadStatus `json:"trackedDownloadStatus,omitempty"`
 }
 
 // QueueResourcePagingResource defines model for QueueResourcePagingResource.
@@ -1330,12 +1339,6 @@ type QueueStatusResource struct {
 type Ratings struct {
 	Value *float64 `json:"value,omitempty"`
 	Votes *int32   `json:"votes,omitempty"`
-}
-
-// Rejection defines model for Rejection.
-type Rejection struct {
-	Reason *string        `json:"reason"`
-	Type   *RejectionType `json:"type,omitempty"`
 }
 
 // RejectionType defines model for RejectionType.
@@ -3228,6 +3231,9 @@ type ClientInterface interface {
 	PutApiV3SeriesIdWithBody(ctx context.Context, id string, params *PutApiV3SeriesIdParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PutApiV3SeriesId(ctx context.Context, id string, params *PutApiV3SeriesIdParams, body PutApiV3SeriesIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetApiV3SeriesIdFolder request
+	GetApiV3SeriesIdFolder(ctx context.Context, id int32, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetApiV3SystemBackup request
 	GetApiV3SystemBackup(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -6809,6 +6815,18 @@ func (c *Client) PutApiV3SeriesIdWithBody(ctx context.Context, id string, params
 
 func (c *Client) PutApiV3SeriesId(ctx context.Context, id string, params *PutApiV3SeriesIdParams, body PutApiV3SeriesIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV3SeriesIdRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetApiV3SeriesIdFolder(ctx context.Context, id int32, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiV3SeriesIdFolderRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -16747,6 +16765,40 @@ func NewPutApiV3SeriesIdRequestWithBody(server string, id string, params *PutApi
 	return req, nil
 }
 
+// NewGetApiV3SeriesIdFolderRequest generates requests for GetApiV3SeriesIdFolder
+func NewGetApiV3SeriesIdFolderRequest(server string, id int32) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v3/series/%s/folder", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetApiV3SystemBackupRequest generates requests for GetApiV3SystemBackup
 func NewGetApiV3SystemBackupRequest(server string) (*http.Request, error) {
 	var err error
@@ -18891,6 +18943,9 @@ type ClientWithResponsesInterface interface {
 	PutApiV3SeriesIdWithBodyWithResponse(ctx context.Context, id string, params *PutApiV3SeriesIdParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3SeriesIdResponse, error)
 
 	PutApiV3SeriesIdWithResponse(ctx context.Context, id string, params *PutApiV3SeriesIdParams, body PutApiV3SeriesIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3SeriesIdResponse, error)
+
+	// GetApiV3SeriesIdFolderWithResponse request
+	GetApiV3SeriesIdFolderWithResponse(ctx context.Context, id int32, reqEditors ...RequestEditorFn) (*GetApiV3SeriesIdFolderResponse, error)
 
 	// GetApiV3SystemBackupWithResponse request
 	GetApiV3SystemBackupWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiV3SystemBackupResponse, error)
@@ -23284,6 +23339,7 @@ func (r PostApiV3SeriesImportResponse) StatusCode() int {
 type GetApiV3SeriesLookupResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *[]SeriesResource
 }
 
 // Status returns HTTPResponse.Status
@@ -23361,6 +23417,27 @@ func (r PutApiV3SeriesIdResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r PutApiV3SeriesIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetApiV3SeriesIdFolderResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetApiV3SeriesIdFolderResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetApiV3SeriesIdFolderResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -26563,6 +26640,15 @@ func (c *ClientWithResponses) PutApiV3SeriesIdWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParsePutApiV3SeriesIdResponse(rsp)
+}
+
+// GetApiV3SeriesIdFolderWithResponse request returning *GetApiV3SeriesIdFolderResponse
+func (c *ClientWithResponses) GetApiV3SeriesIdFolderWithResponse(ctx context.Context, id int32, reqEditors ...RequestEditorFn) (*GetApiV3SeriesIdFolderResponse, error) {
+	rsp, err := c.GetApiV3SeriesIdFolder(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetApiV3SeriesIdFolderResponse(rsp)
 }
 
 // GetApiV3SystemBackupWithResponse request returning *GetApiV3SystemBackupResponse
@@ -31482,6 +31568,19 @@ func ParseGetApiV3SeriesLookupResponse(rsp *http.Response) (*GetApiV3SeriesLooku
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []SeriesResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 200:
+		// Content-type (text/plain) unsupported
+
+	}
+
 	return response, nil
 }
 
@@ -31548,6 +31647,22 @@ func ParsePutApiV3SeriesIdResponse(rsp *http.Response) (*PutApiV3SeriesIdRespons
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseGetApiV3SeriesIdFolderResponse parses an HTTP response from a GetApiV3SeriesIdFolderWithResponse call
+func ParseGetApiV3SeriesIdFolderResponse(rsp *http.Response) (*GetApiV3SeriesIdFolderResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetApiV3SeriesIdFolderResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
