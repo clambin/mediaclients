@@ -14,6 +14,8 @@ jobs:
       - name: update
         run: |
           go run internal/bump/bump.go
+          go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
+          go generate ./...
         shell: bash
       - uses: peter-evans/create-pull-request@v7
 
