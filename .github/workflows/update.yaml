@@ -1,10 +1,11 @@
 name: Update
-
 on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'
-
+permissions:
+  # this is probably not enough but guess we'll need to wait for it to fail
+  contents: write
 jobs:
   update:
     runs-on: ubuntu-latest
