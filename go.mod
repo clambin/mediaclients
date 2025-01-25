@@ -2,6 +2,8 @@ module github.com/clambin/mediaclients
 
 go 1.22
 
+toolchain go1.23.4
+
 require (
 	github.com/clambin/go-common/set v0.4.3
 	github.com/clambin/go-common/testutils v0.5.0
