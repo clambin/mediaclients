@@ -13,6 +13,39 @@ import (
 
 var update = flag.Bool("update", false, "update .golden files")
 
+func Test_Main(t *testing.T) {
+	tmpdir := t.TempDir()
+	configs := []clientConfig{
+		{
+			templateVariables: templateVariables{Package: "foo", App: "foo", Tag: "v1.2.3"},
+			clientSource:      "client1.go",
+		},
+		{
+			templateVariables: templateVariables{Package: "bar", App: "bar", Tag: "v4.5.6"},
+			clientSource:      "client2.go",
+		},
+	}
+	var stdout, stderr bytes.Buffer
+	Main(&stdout, &stderr, tmpdir, configs)
+
+	if got := stdout.String(); got != "Bump foo to v1.2.3, bar to v4.5.6\n" {
+		t.Errorf("stdout = %q; want %q", got, "Bump foo to v1.2.3, bar to v4.5.6\n")
+	}
+}
+
+func TestClientConfig_currentTag(t *testing.T) {
+	cfg := &clientConfig{
+		clientSource: filepath.Join("testdata", "client.go"),
+	}
+	got, err := cfg.currentTag()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "v1.2.3" {
+		t.Errorf("got %q, want v1.2.3", got)
+	}
+}
+
 func TestClientType_getTag(t *testing.T) {
 	tests := []struct {
 		name string
@@ -69,11 +102,7 @@ func TestClientType_getTag(t *testing.T) {
 }
 
 func Test_writeFile(t *testing.T) {
-	tmp, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatalf("failed to create tmp directory: %v", err)
-	}
-	t.Cleanup(func() { _ = os.RemoveAll(tmp) })
+	tmpdir := t.TempDir()
 	cfg := clientConfig{
 		templateVariables: templateVariables{
 			Package:    "foo",
@@ -83,12 +112,12 @@ func Test_writeFile(t *testing.T) {
 		},
 		clientSource: "client.gen.go",
 	}
-	err = writeFile(tmp, cfg)
+	err := writeFile(tmpdir, cfg)
 	if err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
 
-	got, err := os.ReadFile(filepath.Join(tmp, cfg.clientSource))
+	got, err := os.ReadFile(filepath.Join(tmpdir, cfg.clientSource))
 	if err != nil {
 		t.Fatalf("failed to read file: %v", err)
 	}

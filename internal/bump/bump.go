@@ -5,34 +5,45 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"text/template"
 	"time"
 )
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-		if a.Key == slog.TimeKey {
-			return slog.Attr{}
-		}
-		return a
-	}}))
-
 	for _, config := range clientConfigs {
-		l := logger.With("client", config.clientType.String())
 		var err error
 		if config.templateVariables.Tag, err = config.clientType.getTag(""); err != nil {
-			l.Error("failed to determine tag", "err", err)
+			_, _ = fmt.Fprintf(os.Stderr, "failed to determine tag for %q: %v", config.clientType, err)
 			os.Exit(1)
 		}
-		l.Info("writing client file", "tag", config.templateVariables.Tag)
-		if err = writeFile(".", config); err != nil {
-			l.Error("failed to write client file", "err", err)
-			os.Exit(1)
+	}
+	Main(os.Stdout, os.Stderr, ".", clientConfigs)
+}
+
+func Main(stdout, stderr io.Writer, baseDir string, clientConfigs []clientConfig) {
+	changes := make(map[string]string, len(clientConfigs))
+	for _, config := range clientConfigs {
+		if currentTag, _ := config.currentTag(); currentTag != config.templateVariables.Tag {
+			changes[config.App] = config.templateVariables.Tag
+			if err := writeFile(baseDir, config); err != nil {
+				_, _ = fmt.Fprintf(stderr, "failed to write client file for %q: %v", config.clientType, err)
+				os.Exit(1)
+			}
 		}
+	}
+
+	bumps := make([]string, 0, len(changes))
+	for app, tag := range changes {
+		bumps = append(bumps, app+" to "+tag)
+	}
+	if len(bumps) > 0 {
+		_, _ = fmt.Fprintln(stdout, "Bump", strings.Join(bumps, ", "))
 	}
 }
 
@@ -40,6 +51,22 @@ type clientConfig struct {
 	templateVariables
 	clientSource string
 	clientType
+}
+
+var (
+	tagRegExp = regexp.MustCompile("/refs/tags/(.*)+/src/")
+)
+
+func (c clientConfig) currentTag() (string, error) {
+	body, err := os.ReadFile(c.clientSource)
+	if err != nil {
+		// return nil if there's no clientSource: main will create it
+		return "", nil
+	}
+	if matches := tagRegExp.FindSubmatch(body); len(matches) == 2 {
+		return string(matches[1]), nil
+	}
+	return "", errors.New("failed to parse tag")
 }
 
 var clientConfigs = []clientConfig{
