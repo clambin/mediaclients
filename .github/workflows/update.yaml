@@ -4,7 +4,6 @@ on:
   schedule:
     - cron: '0 0 * * *'
 permissions:
-  # this is probably not enough but guess we'll need to wait for it to fail
   contents: write
   pull-requests: write
 jobs:
