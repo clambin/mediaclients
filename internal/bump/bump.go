@@ -16,19 +16,19 @@ import (
 )
 
 func main() {
-	for _, config := range clientConfigs {
+	for i := range clientConfigs {
 		var err error
-		if config.templateVariables.Tag, err = config.clientType.getTag(""); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "failed to determine tag for %q: %v", config.clientType, err)
+		if clientConfigs[i].templateVariables.Tag, err = clientConfigs[i].clientType.getTag(""); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "failed to determine tag for %q: %v", clientConfigs[i].clientType, err)
 			os.Exit(1)
 		}
 	}
 	Main(os.Stdout, os.Stderr, ".", clientConfigs)
 }
 
-func Main(stdout, stderr io.Writer, baseDir string, clientConfigs []clientConfig) {
+func Main(stdout, stderr io.Writer, baseDir string, cfg []clientConfig) {
 	changes := make(map[string]string, len(clientConfigs))
-	for _, config := range clientConfigs {
+	for _, config := range cfg {
 		if currentTag, _ := config.currentTag(); currentTag != config.templateVariables.Tag {
 			changes[config.App] = config.templateVariables.Tag
 			if err := writeFile(baseDir, config); err != nil {
