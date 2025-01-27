@@ -23,6 +23,4 @@ jobs:
         shell: bash
       - uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7
         with:
-          title: ${{ steps.bump.outputs.changes }}
-
-
+          title: "feat: ${{ steps.bump.outputs.changes }}"
