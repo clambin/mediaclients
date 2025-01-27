@@ -15,7 +15,9 @@ jobs:
       - name: update
         id: bump
         run: |
-          echo "changes=$(go run internal/bump/bump.go)" >> $GITHUB_OUTPUT
+          BUMP=$(go run internal/bump/bump.go)
+          echo "Changes: $BUMP"
+          echo "changes=$BUMP" >> $GITHUB_OUTPUT
           go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
           go generate ./...
         shell: bash
