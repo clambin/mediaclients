@@ -19,7 +19,7 @@ jobs:
           go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
           go generate ./...
         shell: bash
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7
         with:
           title: ${{ steps.bump.outputs.changes }}
 
