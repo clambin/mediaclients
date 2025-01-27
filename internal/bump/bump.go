@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"text/template"
 	"time"
@@ -42,6 +43,7 @@ func Main(stdout, stderr io.Writer, baseDir string, cfg []clientConfig) {
 	for app, tag := range changes {
 		bumps = append(bumps, app+" to "+tag)
 	}
+	slices.Sort(bumps)
 	if len(bumps) > 0 {
 		_, _ = fmt.Fprintln(stdout, "Bump", strings.Join(bumps, ", "))
 	}

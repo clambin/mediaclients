@@ -28,8 +28,8 @@ func Test_Main(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	Main(&stdout, &stderr, tmpdir, configs)
 
-	if got := stdout.String(); got != "Bump foo to v1.2.3, bar to v4.5.6\n" {
-		t.Errorf("stdout = %q; want %q", got, "Bump foo to v1.2.3, bar to v4.5.6\n")
+	if got := stdout.String(); got != "Bump bar to v4.5.6, foo to v1.2.3\n" {
+		t.Errorf("stdout = %q; want %q", got, "Bump bar to v4.5.6, foo to v1.2.3\n")
 	}
 }
 
