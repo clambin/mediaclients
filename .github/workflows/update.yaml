@@ -12,15 +12,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-      - name: update
+      - name: Bump API versions
         id: bump
         run: |
-          echo "changes=$(go run internal/bump/bump.go)" >> $GITHUB_OUTPUT
+          BUMP=$(go run internal/bump/bump.go)
+          echo "Changes: $BUMP"
+          echo "changes=$BUMP" >> $GITHUB_OUTPUT
           go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
           go generate ./...
         shell: bash
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
         with:
-          title: ${{ steps.bump.outputs.changes }}
-
-
+          title: "feat: ${{ steps.bump.outputs.changes }}"
