@@ -880,6 +880,12 @@ type ImportListResource struct {
 // ImportListType defines model for ImportListType.
 type ImportListType string
 
+// ImportRejectionResource defines model for ImportRejectionResource.
+type ImportRejectionResource struct {
+	Reason *string        `json:"reason"`
+	Type   *RejectionType `json:"type,omitempty"`
+}
+
 // IndexerBulkResource defines model for IndexerBulkResource.
 type IndexerBulkResource struct {
 	ApplyTags               *ApplyTags `json:"applyTags,omitempty"`
@@ -984,38 +990,39 @@ type LogResourcePagingResource struct {
 
 // ManualImportReprocessResource defines model for ManualImportReprocessResource.
 type ManualImportReprocessResource struct {
-	CustomFormatScore *int32                  `json:"customFormatScore,omitempty"`
-	CustomFormats     *[]CustomFormatResource `json:"customFormats"`
-	DownloadId        *string                 `json:"downloadId"`
-	Id                *int32                  `json:"id,omitempty"`
-	IndexerFlags      *int32                  `json:"indexerFlags,omitempty"`
-	Languages         *[]Language             `json:"languages"`
-	Movie             *MovieResource          `json:"movie,omitempty"`
-	MovieId           *int32                  `json:"movieId,omitempty"`
-	Path              *string                 `json:"path"`
-	Quality           *QualityModel           `json:"quality,omitempty"`
-	Rejections        *[]Rejection            `json:"rejections"`
-	ReleaseGroup      *string                 `json:"releaseGroup"`
+	CustomFormatScore *int32                     `json:"customFormatScore,omitempty"`
+	CustomFormats     *[]CustomFormatResource    `json:"customFormats"`
+	DownloadId        *string                    `json:"downloadId"`
+	Id                *int32                     `json:"id,omitempty"`
+	IndexerFlags      *int32                     `json:"indexerFlags,omitempty"`
+	Languages         *[]Language                `json:"languages"`
+	Movie             *MovieResource             `json:"movie,omitempty"`
+	MovieId           *int32                     `json:"movieId,omitempty"`
+	Path              *string                    `json:"path"`
+	Quality           *QualityModel              `json:"quality,omitempty"`
+	Rejections        *[]ImportRejectionResource `json:"rejections"`
+	ReleaseGroup      *string                    `json:"releaseGroup"`
 }
 
 // ManualImportResource defines model for ManualImportResource.
 type ManualImportResource struct {
-	CustomFormatScore *int32                  `json:"customFormatScore,omitempty"`
-	CustomFormats     *[]CustomFormatResource `json:"customFormats"`
-	DownloadId        *string                 `json:"downloadId"`
-	FolderName        *string                 `json:"folderName"`
-	Id                *int32                  `json:"id,omitempty"`
-	IndexerFlags      *int32                  `json:"indexerFlags,omitempty"`
-	Languages         *[]Language             `json:"languages"`
-	Movie             *MovieResource          `json:"movie,omitempty"`
-	Name              *string                 `json:"name"`
-	Path              *string                 `json:"path"`
-	Quality           *QualityModel           `json:"quality,omitempty"`
-	QualityWeight     *int32                  `json:"qualityWeight,omitempty"`
-	Rejections        *[]Rejection            `json:"rejections"`
-	RelativePath      *string                 `json:"relativePath"`
-	ReleaseGroup      *string                 `json:"releaseGroup"`
-	Size              *int64                  `json:"size,omitempty"`
+	CustomFormatScore *int32                     `json:"customFormatScore,omitempty"`
+	CustomFormats     *[]CustomFormatResource    `json:"customFormats"`
+	DownloadId        *string                    `json:"downloadId"`
+	FolderName        *string                    `json:"folderName"`
+	Id                *int32                     `json:"id,omitempty"`
+	IndexerFlags      *int32                     `json:"indexerFlags,omitempty"`
+	Languages         *[]Language                `json:"languages"`
+	Movie             *MovieResource             `json:"movie,omitempty"`
+	MovieFileId       *int32                     `json:"movieFileId"`
+	Name              *string                    `json:"name"`
+	Path              *string                    `json:"path"`
+	Quality           *QualityModel              `json:"quality,omitempty"`
+	QualityWeight     *int32                     `json:"qualityWeight,omitempty"`
+	Rejections        *[]ImportRejectionResource `json:"rejections"`
+	RelativePath      *string                    `json:"relativePath"`
+	ReleaseGroup      *string                    `json:"releaseGroup"`
+	Size              *int64                     `json:"size,omitempty"`
 }
 
 // MediaCover defines model for MediaCover.
@@ -1474,12 +1481,6 @@ type Ratings struct {
 	Trakt          *RatingChild `json:"trakt,omitempty"`
 }
 
-// Rejection defines model for Rejection.
-type Rejection struct {
-	Reason *string        `json:"reason"`
-	Type   *RejectionType `json:"type,omitempty"`
-}
-
 // RejectionType defines model for RejectionType.
 type RejectionType string
 
@@ -1521,6 +1522,7 @@ type ReleaseResource struct {
 	MagnetUrl           *string                 `json:"magnetUrl"`
 	MappedMovieId       *int32                  `json:"mappedMovieId"`
 	MovieId             *int32                  `json:"movieId"`
+	MovieRequested      *bool                   `json:"movieRequested,omitempty"`
 	MovieTitles         *[]string               `json:"movieTitles"`
 	Protocol            *DownloadProtocol       `json:"protocol,omitempty"`
 	PublishDate         *time.Time              `json:"publishDate,omitempty"`
