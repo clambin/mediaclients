@@ -1982,6 +1982,9 @@ type GetApiV3MoviefileParams struct {
 	MovieFileIds *[]int32 `form:"movieFileIds,omitempty" json:"movieFileIds,omitempty"`
 }
 
+// PutApiV3MoviefileBulkJSONBody defines parameters for PutApiV3MoviefileBulk.
+type PutApiV3MoviefileBulkJSONBody = []MovieFileResource
+
 // PostApiV3NotificationParams defines parameters for PostApiV3Notification.
 type PostApiV3NotificationParams struct {
 	ForceSave *bool `form:"forceSave,omitempty" json:"forceSave,omitempty"`
@@ -2284,6 +2287,9 @@ type PutApiV3MovieIdJSONRequestBody = MovieResource
 
 // DeleteApiV3MoviefileBulkJSONRequestBody defines body for DeleteApiV3MoviefileBulk for application/json ContentType.
 type DeleteApiV3MoviefileBulkJSONRequestBody = MovieFileListResource
+
+// PutApiV3MoviefileBulkJSONRequestBody defines body for PutApiV3MoviefileBulk for application/json ContentType.
+type PutApiV3MoviefileBulkJSONRequestBody = PutApiV3MoviefileBulkJSONBody
 
 // PutApiV3MoviefileEditorJSONRequestBody defines body for PutApiV3MoviefileEditor for application/json ContentType.
 type PutApiV3MoviefileEditorJSONRequestBody = MovieFileListResource
@@ -3037,6 +3043,11 @@ type ClientInterface interface {
 	DeleteApiV3MoviefileBulkWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	DeleteApiV3MoviefileBulk(ctx context.Context, body DeleteApiV3MoviefileBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutApiV3MoviefileBulkWithBody request with any body
+	PutApiV3MoviefileBulkWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutApiV3MoviefileBulk(ctx context.Context, body PutApiV3MoviefileBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutApiV3MoviefileEditorWithBody request with any body
 	PutApiV3MoviefileEditorWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5957,6 +5968,30 @@ func (c *Client) DeleteApiV3MoviefileBulkWithBody(ctx context.Context, contentTy
 
 func (c *Client) DeleteApiV3MoviefileBulk(ctx context.Context, body DeleteApiV3MoviefileBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteApiV3MoviefileBulkRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutApiV3MoviefileBulkWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutApiV3MoviefileBulkRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutApiV3MoviefileBulk(ctx context.Context, body PutApiV3MoviefileBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutApiV3MoviefileBulkRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -14291,6 +14326,46 @@ func NewDeleteApiV3MoviefileBulkRequestWithBody(server string, contentType strin
 	return req, nil
 }
 
+// NewPutApiV3MoviefileBulkRequest calls the generic PutApiV3MoviefileBulk builder with application/json body
+func NewPutApiV3MoviefileBulkRequest(server string, body PutApiV3MoviefileBulkJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutApiV3MoviefileBulkRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewPutApiV3MoviefileBulkRequestWithBody generates requests for PutApiV3MoviefileBulk with any type of body
+func NewPutApiV3MoviefileBulkRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v3/moviefile/bulk")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewPutApiV3MoviefileEditorRequest calls the generic PutApiV3MoviefileEditor builder with application/json body
 func NewPutApiV3MoviefileEditorRequest(server string, body PutApiV3MoviefileEditorJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -18350,6 +18425,11 @@ type ClientWithResponsesInterface interface {
 
 	DeleteApiV3MoviefileBulkWithResponse(ctx context.Context, body DeleteApiV3MoviefileBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3MoviefileBulkResponse, error)
 
+	// PutApiV3MoviefileBulkWithBodyWithResponse request with any body
+	PutApiV3MoviefileBulkWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3MoviefileBulkResponse, error)
+
+	PutApiV3MoviefileBulkWithResponse(ctx context.Context, body PutApiV3MoviefileBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3MoviefileBulkResponse, error)
+
 	// PutApiV3MoviefileEditorWithBodyWithResponse request with any body
 	PutApiV3MoviefileEditorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3MoviefileEditorResponse, error)
 
@@ -22022,6 +22102,27 @@ func (r DeleteApiV3MoviefileBulkResponse) StatusCode() int {
 	return 0
 }
 
+type PutApiV3MoviefileBulkResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r PutApiV3MoviefileBulkResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutApiV3MoviefileBulkResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type PutApiV3MoviefileEditorResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -25622,6 +25723,23 @@ func (c *ClientWithResponses) DeleteApiV3MoviefileBulkWithResponse(ctx context.C
 		return nil, err
 	}
 	return ParseDeleteApiV3MoviefileBulkResponse(rsp)
+}
+
+// PutApiV3MoviefileBulkWithBodyWithResponse request with arbitrary body returning *PutApiV3MoviefileBulkResponse
+func (c *ClientWithResponses) PutApiV3MoviefileBulkWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3MoviefileBulkResponse, error) {
+	rsp, err := c.PutApiV3MoviefileBulkWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutApiV3MoviefileBulkResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutApiV3MoviefileBulkWithResponse(ctx context.Context, body PutApiV3MoviefileBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3MoviefileBulkResponse, error) {
+	rsp, err := c.PutApiV3MoviefileBulk(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutApiV3MoviefileBulkResponse(rsp)
 }
 
 // PutApiV3MoviefileEditorWithBodyWithResponse request with arbitrary body returning *PutApiV3MoviefileEditorResponse
@@ -30278,6 +30396,22 @@ func ParseDeleteApiV3MoviefileBulkResponse(rsp *http.Response) (*DeleteApiV3Movi
 	}
 
 	response := &DeleteApiV3MoviefileBulkResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParsePutApiV3MoviefileBulkResponse parses an HTTP response from a PutApiV3MoviefileBulkWithResponse call
+func ParsePutApiV3MoviefileBulkResponse(rsp *http.Response) (*PutApiV3MoviefileBulkResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutApiV3MoviefileBulkResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
