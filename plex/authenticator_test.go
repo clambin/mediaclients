@@ -121,10 +121,10 @@ func TestClient_GetAuthToken(t *testing.T) {
 			}
 
 			got, err := c.GetAuthToken(context.Background())
-			if !tt.wantErr(t, err) {
-				return
+			tt.wantErr(t, err)
+			if err == nil {
+				assert.Equal(t, tt.want, got)
 			}
-			assert.Equal(t, tt.want, got)
 		})
 	}
 }

@@ -1,7 +1,7 @@
 package testutil
 
 import (
-	"github.com/clambin/go-common/testutils"
+	"codeberg.org/clambin/go-common/testutils"
 	"net/http"
 )
 
