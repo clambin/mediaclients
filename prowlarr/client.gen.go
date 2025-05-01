@@ -438,7 +438,7 @@ type HealthResource struct {
 	Message *string            `json:"message"`
 	Source  *string            `json:"source"`
 	Type    *HealthCheckResult `json:"type,omitempty"`
-	WikiUrl *string            `json:"wikiUrl,omitempty"`
+	WikiUrl *string            `json:"wikiUrl"`
 }
 
 // HistoryEventType defines model for HistoryEventType.
