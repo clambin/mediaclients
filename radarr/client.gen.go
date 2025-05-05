@@ -731,7 +731,7 @@ type HealthResource struct {
 	Message *string            `json:"message"`
 	Source  *string            `json:"source"`
 	Type    *HealthCheckResult `json:"type,omitempty"`
-	WikiUrl *string            `json:"wikiUrl,omitempty"`
+	WikiUrl *string            `json:"wikiUrl"`
 }
 
 // HistoryResource defines model for HistoryResource.
@@ -1141,7 +1141,7 @@ type MovieFileListResource struct {
 
 // MovieFileResource defines model for MovieFileResource.
 type MovieFileResource struct {
-	CustomFormatScore   *int32                  `json:"customFormatScore,omitempty"`
+	CustomFormatScore   *int32                  `json:"customFormatScore"`
 	CustomFormats       *[]CustomFormatResource `json:"customFormats"`
 	DateAdded           *time.Time              `json:"dateAdded,omitempty"`
 	Edition             *string                 `json:"edition"`
@@ -3035,6 +3035,9 @@ type ClientInterface interface {
 	PutApiV3MovieIdWithBody(ctx context.Context, id string, params *PutApiV3MovieIdParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PutApiV3MovieId(ctx context.Context, id string, params *PutApiV3MovieIdParams, body PutApiV3MovieIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetApiV3MovieIdFolder request
+	GetApiV3MovieIdFolder(ctx context.Context, id int32, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetApiV3Moviefile request
 	GetApiV3Moviefile(ctx context.Context, params *GetApiV3MoviefileParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -5932,6 +5935,18 @@ func (c *Client) PutApiV3MovieIdWithBody(ctx context.Context, id string, params 
 
 func (c *Client) PutApiV3MovieId(ctx context.Context, id string, params *PutApiV3MovieIdParams, body PutApiV3MovieIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV3MovieIdRequest(c.Server, id, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetApiV3MovieIdFolder(ctx context.Context, id int32, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiV3MovieIdFolderRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -14221,6 +14236,40 @@ func NewPutApiV3MovieIdRequestWithBody(server string, id string, params *PutApiV
 	return req, nil
 }
 
+// NewGetApiV3MovieIdFolderRequest generates requests for GetApiV3MovieIdFolder
+func NewGetApiV3MovieIdFolderRequest(server string, id int32) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v3/movie/%s/folder", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetApiV3MoviefileRequest generates requests for GetApiV3Moviefile
 func NewGetApiV3MoviefileRequest(server string, params *GetApiV3MoviefileParams) (*http.Request, error) {
 	var err error
@@ -18417,6 +18466,9 @@ type ClientWithResponsesInterface interface {
 
 	PutApiV3MovieIdWithResponse(ctx context.Context, id string, params *PutApiV3MovieIdParams, body PutApiV3MovieIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3MovieIdResponse, error)
 
+	// GetApiV3MovieIdFolderWithResponse request
+	GetApiV3MovieIdFolderWithResponse(ctx context.Context, id int32, reqEditors ...RequestEditorFn) (*GetApiV3MovieIdFolderResponse, error)
+
 	// GetApiV3MoviefileWithResponse request
 	GetApiV3MoviefileWithResponse(ctx context.Context, params *GetApiV3MoviefileParams, reqEditors ...RequestEditorFn) (*GetApiV3MoviefileResponse, error)
 
@@ -22053,6 +22105,27 @@ func (r PutApiV3MovieIdResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r PutApiV3MovieIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetApiV3MovieIdFolderResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetApiV3MovieIdFolderResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetApiV3MovieIdFolderResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -25697,6 +25770,15 @@ func (c *ClientWithResponses) PutApiV3MovieIdWithResponse(ctx context.Context, i
 		return nil, err
 	}
 	return ParsePutApiV3MovieIdResponse(rsp)
+}
+
+// GetApiV3MovieIdFolderWithResponse request returning *GetApiV3MovieIdFolderResponse
+func (c *ClientWithResponses) GetApiV3MovieIdFolderWithResponse(ctx context.Context, id int32, reqEditors ...RequestEditorFn) (*GetApiV3MovieIdFolderResponse, error) {
+	rsp, err := c.GetApiV3MovieIdFolder(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetApiV3MovieIdFolderResponse(rsp)
 }
 
 // GetApiV3MoviefileWithResponse request returning *GetApiV3MoviefileResponse
@@ -30356,6 +30438,22 @@ func ParsePutApiV3MovieIdResponse(rsp *http.Response) (*PutApiV3MovieIdResponse,
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseGetApiV3MovieIdFolderResponse parses an HTTP response from a GetApiV3MovieIdFolderWithResponse call
+func ParseGetApiV3MovieIdFolderResponse(rsp *http.Response) (*GetApiV3MovieIdFolderResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetApiV3MovieIdFolderResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
