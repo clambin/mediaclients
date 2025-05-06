@@ -17,7 +17,7 @@ func TestAuthenticator_RoundTrip(t *testing.T) {
 	defer server.Client()
 
 	c := New("user@example.com", "somepassword", "", "", server.URL, nil)
-	c.authenticator.authURL = authServer.URL
+	c.authURL = authServer.URL
 
 	resp, err := c.GetIdentity(context.Background())
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestAuthenticator_Custom_RoundTripper(t *testing.T) {
 	defer server.Client()
 
 	c := New("user@example.com", "somepassword", "", "", server.URL, &dummyRoundTripper{next: http.DefaultTransport})
-	c.authenticator.authURL = authServer.URL
+	c.authURL = authServer.URL
 
 	resp, err := c.GetIdentity(context.Background())
 	require.NoError(t, err)
@@ -115,7 +115,7 @@ func TestClient_GetAuthToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := New(tt.fields.UserName, tt.fields.Password, "", "", "", nil)
-			c.authenticator.authURL = authServer.URL
+			c.authURL = authServer.URL
 			if tt.fields.AuthToken != "" {
 				c.SetAuthToken(tt.fields.AuthToken)
 			}

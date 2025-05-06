@@ -85,7 +85,7 @@ func TestClientType_getTag(t *testing.T) {
 				}
 			}))
 			// start test server
-			got, err := tt.clientType.getTag(s.URL)
+			got, err := tt.getTag(s.URL)
 			if err != nil {
 				t.Fatalf("getTag() error = %v", err)
 			}
@@ -94,7 +94,7 @@ func TestClientType_getTag(t *testing.T) {
 			}
 
 			s.Close()
-			if _, err = tt.clientType.getTag(s.URL); err == nil {
+			if _, err = tt.getTag(s.URL); err == nil {
 				t.Errorf("getTag() want error, got nil")
 			}
 		})

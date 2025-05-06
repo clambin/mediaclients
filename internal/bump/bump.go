@@ -31,7 +31,7 @@ func Main(stdout, stderr io.Writer, baseDir string, cfg []clientConfig) {
 	changes := make(map[string]string, len(clientConfigs))
 	for _, config := range cfg {
 		if currentTag, _ := config.currentTag(); currentTag != config.templateVariables.Tag {
-			changes[config.App] = config.templateVariables.Tag
+			changes[config.templateVariables.App] = config.templateVariables.Tag
 			if err := writeFile(baseDir, config); err != nil {
 				_, _ = fmt.Fprintf(stderr, "failed to write client file for %q: %v", config.clientType, err)
 				os.Exit(1)
@@ -50,9 +50,9 @@ func Main(stdout, stderr io.Writer, baseDir string, cfg []clientConfig) {
 }
 
 type clientConfig struct {
-	templateVariables
-	clientSource string
-	clientType
+	templateVariables templateVariables
+	clientSource      string
+	clientType        clientType
 }
 
 var (
