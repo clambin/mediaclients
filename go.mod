@@ -2,11 +2,9 @@ module github.com/clambin/mediaclients
 
 go 1.24
 
-toolchain go1.24.0
-
 require (
 	codeberg.org/clambin/go-common/set v0.6.0
-	codeberg.org/clambin/go-common/testutils v0.6.0
+	codeberg.org/clambin/go-common/testutils v0.7.0
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/stretchr/testify v1.10.0
 )
