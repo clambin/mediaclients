@@ -1181,6 +1181,7 @@ type MovieResource struct {
 	ImdbId                *string                     `json:"imdbId"`
 	InCinemas             *time.Time                  `json:"inCinemas"`
 	IsAvailable           *bool                       `json:"isAvailable,omitempty"`
+	Keywords              *[]string                   `json:"keywords"`
 	LastSearchTime        *time.Time                  `json:"lastSearchTime"`
 	MinimumAvailability   *MovieStatusType            `json:"minimumAvailability,omitempty"`
 	Monitored             *bool                       `json:"monitored,omitempty"`
