@@ -57,6 +57,13 @@ const (
 	BackupTypeUpdate    BackupType = "update"
 )
 
+// Defines values for CalendarReleaseType.
+const (
+	CinemaRelease   CalendarReleaseType = "cinemaRelease"
+	DigitalRelease  CalendarReleaseType = "digitalRelease"
+	PhysicalRelease CalendarReleaseType = "physicalRelease"
+)
+
 // Defines values for CertificateValidationType.
 const (
 	CertificateValidationTypeDisabled                  CertificateValidationType = "disabled"
@@ -453,6 +460,9 @@ type BlocklistResourcePagingResource struct {
 	SortKey       *string              `json:"sortKey"`
 	TotalRecords  *int32               `json:"totalRecords,omitempty"`
 }
+
+// CalendarReleaseType defines model for CalendarReleaseType.
+type CalendarReleaseType string
 
 // CertificateValidationType defines model for CertificateValidationType.
 type CertificateValidationType string
@@ -1360,6 +1370,12 @@ type Quality struct {
 	Source     *QualitySource `json:"source,omitempty"`
 }
 
+// QualityDefinitionLimitsResource defines model for QualityDefinitionLimitsResource.
+type QualityDefinitionLimitsResource struct {
+	Max *int32 `json:"max,omitempty"`
+	Min *int32 `json:"min,omitempty"`
+}
+
 // QualityDefinitionResource defines model for QualityDefinitionResource.
 type QualityDefinitionResource struct {
 	Id            *int32   `json:"id,omitempty"`
@@ -2056,7 +2072,7 @@ type GetApiV3ReleaseParams struct {
 
 // GetApiV3RenameParams defines parameters for GetApiV3Rename.
 type GetApiV3RenameParams struct {
-	MovieId *int32 `form:"movieId,omitempty" json:"movieId,omitempty"`
+	MovieId *[]int32 `form:"movieId,omitempty" json:"movieId,omitempty"`
 }
 
 // GetApiV3WantedCutoffParams defines parameters for GetApiV3WantedCutoff.
@@ -2079,10 +2095,11 @@ type GetApiV3WantedMissingParams struct {
 
 // GetFeedV3CalendarRadarrIcsParams defines parameters for GetFeedV3CalendarRadarrIcs.
 type GetFeedV3CalendarRadarrIcsParams struct {
-	PastDays    *int32  `form:"pastDays,omitempty" json:"pastDays,omitempty"`
-	FutureDays  *int32  `form:"futureDays,omitempty" json:"futureDays,omitempty"`
-	Tags        *string `form:"tags,omitempty" json:"tags,omitempty"`
-	Unmonitored *bool   `form:"unmonitored,omitempty" json:"unmonitored,omitempty"`
+	PastDays     *int32                 `form:"pastDays,omitempty" json:"pastDays,omitempty"`
+	FutureDays   *int32                 `form:"futureDays,omitempty" json:"futureDays,omitempty"`
+	Tags         *string                `form:"tags,omitempty" json:"tags,omitempty"`
+	Unmonitored  *bool                  `form:"unmonitored,omitempty" json:"unmonitored,omitempty"`
+	ReleaseTypes *[]CalendarReleaseType `form:"releaseTypes,omitempty" json:"releaseTypes,omitempty"`
 }
 
 // PostLoginMultipartBody defines parameters for PostLogin.
@@ -3109,6 +3126,9 @@ type ClientInterface interface {
 
 	// GetApiV3Qualitydefinition request
 	GetApiV3Qualitydefinition(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetApiV3QualitydefinitionLimits request
+	GetApiV3QualitydefinitionLimits(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutApiV3QualitydefinitionUpdateWithBody request with any body
 	PutApiV3QualitydefinitionUpdateWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -6260,6 +6280,18 @@ func (c *Client) GetApiV3Parse(ctx context.Context, params *GetApiV3ParseParams,
 
 func (c *Client) GetApiV3Qualitydefinition(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetApiV3QualitydefinitionRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetApiV3QualitydefinitionLimits(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiV3QualitydefinitionLimitsRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -15036,6 +15068,33 @@ func NewGetApiV3QualitydefinitionRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewGetApiV3QualitydefinitionLimitsRequest generates requests for GetApiV3QualitydefinitionLimits
+func NewGetApiV3QualitydefinitionLimitsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v3/qualitydefinition/limits")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewPutApiV3QualitydefinitionUpdateRequestWithApplicationWildcardPlusJSONBody calls the generic PutApiV3QualitydefinitionUpdate builder with application/*+json body
 func NewPutApiV3QualitydefinitionUpdateRequestWithApplicationWildcardPlusJSONBody(server string, body PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -17632,6 +17691,22 @@ func NewGetFeedV3CalendarRadarrIcsRequest(server string, params *GetFeedV3Calend
 
 		}
 
+		if params.ReleaseTypes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "releaseTypes", runtime.ParamLocationQuery, *params.ReleaseTypes); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
 		queryURL.RawQuery = queryValues.Encode()
 	}
 
@@ -18539,6 +18614,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetApiV3QualitydefinitionWithResponse request
 	GetApiV3QualitydefinitionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiV3QualitydefinitionResponse, error)
+
+	// GetApiV3QualitydefinitionLimitsWithResponse request
+	GetApiV3QualitydefinitionLimitsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiV3QualitydefinitionLimitsResponse, error)
 
 	// PutApiV3QualitydefinitionUpdateWithBodyWithResponse request with any body
 	PutApiV3QualitydefinitionUpdateWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3QualitydefinitionUpdateResponse, error)
@@ -22521,6 +22599,28 @@ func (r GetApiV3QualitydefinitionResponse) StatusCode() int {
 	return 0
 }
 
+type GetApiV3QualitydefinitionLimitsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *QualityDefinitionLimitsResource
+}
+
+// Status returns HTTPResponse.Status
+func (r GetApiV3QualitydefinitionLimitsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetApiV3QualitydefinitionLimitsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type PutApiV3QualitydefinitionUpdateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -26006,6 +26106,15 @@ func (c *ClientWithResponses) GetApiV3QualitydefinitionWithResponse(ctx context.
 		return nil, err
 	}
 	return ParseGetApiV3QualitydefinitionResponse(rsp)
+}
+
+// GetApiV3QualitydefinitionLimitsWithResponse request returning *GetApiV3QualitydefinitionLimitsResponse
+func (c *ClientWithResponses) GetApiV3QualitydefinitionLimitsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiV3QualitydefinitionLimitsResponse, error) {
+	rsp, err := c.GetApiV3QualitydefinitionLimits(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetApiV3QualitydefinitionLimitsResponse(rsp)
 }
 
 // PutApiV3QualitydefinitionUpdateWithBodyWithResponse request with arbitrary body returning *PutApiV3QualitydefinitionUpdateResponse
@@ -30850,6 +30959,35 @@ func ParseGetApiV3QualitydefinitionResponse(rsp *http.Response) (*GetApiV3Qualit
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest []QualityDefinitionResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 200:
+		// Content-type (text/plain) unsupported
+
+	}
+
+	return response, nil
+}
+
+// ParseGetApiV3QualitydefinitionLimitsResponse parses an HTTP response from a GetApiV3QualitydefinitionLimitsWithResponse call
+func ParseGetApiV3QualitydefinitionLimitsResponse(rsp *http.Response) (*GetApiV3QualitydefinitionLimitsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetApiV3QualitydefinitionLimitsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest QualityDefinitionLimitsResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
