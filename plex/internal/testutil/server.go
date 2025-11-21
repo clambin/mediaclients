@@ -1,19 +1,10 @@
 package testutil
 
 import (
-	"codeberg.org/clambin/go-common/testutils"
 	"net/http"
-)
 
-func WithToken(token string, next http.Handler) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		if request.Header.Get("X-Plex-Token") != token {
-			writer.WriteHeader(http.StatusForbidden)
-			return
-		}
-		next.ServeHTTP(writer, request)
-	}
-}
+	"codeberg.org/clambin/go-common/testutils"
+)
 
 var TestServer = testutils.TestServer{Responses: plexResponses}
 

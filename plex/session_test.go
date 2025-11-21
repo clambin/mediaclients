@@ -2,10 +2,11 @@ package plex_test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/clambin/mediaclients/plex"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestPlexClient_GetStats(t *testing.T) {

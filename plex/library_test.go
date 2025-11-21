@@ -2,21 +2,16 @@ package plex_test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/clambin/mediaclients/plex"
-	"github.com/clambin/mediaclients/plex/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestClient_GetLibraries(t *testing.T) {
-	testServer := httptest.NewServer(&testutil.TestServer)
-	defer testServer.Close()
-
-	c := plex.New("user@example.com", "somepassword", "", "", testServer.URL, nil)
-	c.HTTPClient.Transport = http.DefaultTransport
+	c, testServer := makeClientAndServer(nil)
+	t.Cleanup(testServer.Close)
 
 	libraries, err := c.GetLibraries(context.Background())
 	require.NoError(t, err)
@@ -28,7 +23,7 @@ func TestClient_GetLibraries(t *testing.T) {
 
 func TestClient_GetMovies(t *testing.T) {
 	c, s := makeClientAndServer(nil)
-	defer s.Close()
+	t.Cleanup(s.Close)
 
 	movies, err := c.GetMovies(context.Background(), "1")
 	require.NoError(t, err)
@@ -37,7 +32,7 @@ func TestClient_GetMovies(t *testing.T) {
 
 func TestClient_GetShows(t *testing.T) {
 	c, s := makeClientAndServer(nil)
-	defer s.Close()
+	t.Cleanup(s.Close)
 
 	shows, err := c.GetShows(context.Background(), "2")
 	require.NoError(t, err)
@@ -46,7 +41,7 @@ func TestClient_GetShows(t *testing.T) {
 
 func TestClient_GetSeasons(t *testing.T) {
 	c, s := makeClientAndServer(nil)
-	defer s.Close()
+	t.Cleanup(s.Close)
 
 	shows, err := c.GetSeasons(context.Background(), "200")
 	require.NoError(t, err)
@@ -55,7 +50,7 @@ func TestClient_GetSeasons(t *testing.T) {
 
 func TestClient_GetEpisodes(t *testing.T) {
 	c, s := makeClientAndServer(nil)
-	defer s.Close()
+	t.Cleanup(s.Close)
 
 	shows, err := c.GetEpisodes(context.Background(), "201")
 	require.NoError(t, err)

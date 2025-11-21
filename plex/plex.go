@@ -6,46 +6,66 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 )
+
+type Option func(*Client)
+
+func WithHTTPClient(httpClient *http.Client) Option {
+	return func(client *Client) {
+		client.httpClient = httpClient
+	}
+}
+
+func WithToken(token string) Option {
+	return func(client *Client) {
+		client.tokenSource = &fixedTokenSource{token: token}
+	}
+}
+
+func WithCredentials(username, password string, identity ClientIdentity) Option {
+	return func(client *Client) {
+		client.tokenSource = &legacyCredentialsTokenSource{
+			httpClient: &http.Client{},
+			username:   username,
+			password:   password,
+			identity:   identity,
+		}
+	}
+}
 
 // Client calls the Plex APIs
 type Client struct {
-	URL        string
-	HTTPClient *http.Client
-	*authenticator
+	httpClient  *http.Client
+	tokenSource tokenSource
+	url         string
 }
 
-func New(username, password, product, version, url string, roundTripper http.RoundTripper) *Client {
-	if roundTripper == nil {
-		roundTripper = http.DefaultTransport
+func New(url string, opts ...Option) *Client {
+	client := Client{
+		httpClient: &http.Client{},
+		url:        url,
 	}
-	auth := &authenticator{
-		httpClient: &http.Client{Timeout: 10 * time.Second},
-		username:   username,
-		password:   password,
-		authURL:    authURL,
-		product:    product,
-		version:    version,
-		next:       roundTripper,
+	for _, o := range opts {
+		o(&client)
 	}
-
-	return &Client{
-		URL:           url,
-		HTTPClient:    &http.Client{Transport: auth},
-		authenticator: auth,
-	}
+	return &client
 }
 
 func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
-	target := c.URL + endpoint
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	token, err := c.tokenSource.Token(ctx)
+	if err != nil {
+		var zero T
+		return zero, fmt.Errorf("token: %w", err)
+	}
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.url+endpoint, nil)
 	req.Header.Add("Accept", "application/json")
+	req.Header.Add("X-Plex-Token", token)
 
 	var response struct {
 		MediaContainer T `json:"MediaContainer"`
 	}
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return response.MediaContainer, err
 	}

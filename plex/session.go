@@ -1,33 +1,32 @@
 package plex
 
 import (
-	"codeberg.org/clambin/go-common/set"
 	"context"
 	"fmt"
 	"strings"
+
+	"codeberg.org/clambin/go-common/set"
 )
 
 // GetSessions retrieves session information from the server.
 func (c *Client) GetSessions(ctx context.Context) ([]Session, error) {
 	type response struct {
-		Size     int       `json:"size"`
 		Metadata []Session `json:"Metadata"`
+		Size     int       `json:"size"`
 	}
 	resp, err := call[response](ctx, c, "/status/sessions")
-	if err != nil {
-		return nil, err
-	}
 	return resp.Metadata, err
 }
 
 // Session contains one record in a Sessions
 type Session struct {
-	AddedAt               int            `json:"addedAt"`
+	LastViewedAt          Timestamp      `json:"lastViewedAt"`
+	UpdatedAt             Timestamp      `json:"updatedAt"`
+	User                  SessionUser    `json:"User"`
+	Session               SessionStats   `json:"Session"`
 	Art                   string         `json:"art"`
-	AudienceRating        float64        `json:"audienceRating"`
 	AudienceRatingImage   string         `json:"audienceRatingImage"`
 	ContentRating         string         `json:"contentRating"`
-	Duration              int            `json:"duration"`
 	GrandparentArt        string         `json:"grandparentArt"`
 	GrandparentGUID       string         `json:"grandparentGuid"`
 	GrandparentKey        string         `json:"grandparentKey"`
@@ -36,28 +35,22 @@ type Session struct {
 	GrandparentThumb      string         `json:"grandparentThumb"`
 	GrandparentTitle      string         `json:"grandparentTitle"`
 	GUID                  string         `json:"guid"`
-	Index                 int            `json:"index"`
 	Key                   string         `json:"key"`
-	LastViewedAt          Timestamp      `json:"lastViewedAt"`
 	LibrarySectionID      string         `json:"librarySectionID"`
 	LibrarySectionKey     string         `json:"librarySectionKey"`
 	LibrarySectionTitle   string         `json:"librarySectionTitle"`
 	OriginallyAvailableAt string         `json:"originallyAvailableAt"`
 	ParentGUID            string         `json:"parentGuid"`
-	ParentIndex           int            `json:"parentIndex"`
 	ParentKey             string         `json:"parentKey"`
 	ParentRatingKey       string         `json:"parentRatingKey"`
 	ParentThumb           string         `json:"parentThumb"`
 	ParentTitle           string         `json:"parentTitle"`
-	Rating                float64        `json:"rating"`
 	RatingKey             string         `json:"ratingKey"`
 	SessionKey            string         `json:"sessionKey"`
 	Summary               string         `json:"summary"`
 	Thumb                 string         `json:"thumb"`
 	Title                 string         `json:"title"`
 	Type                  string         `json:"type"`
-	UpdatedAt             Timestamp      `json:"updatedAt"`
-	ViewOffset            int            `json:"viewOffset"`
 	Media                 []SessionMedia `json:"Media"`
 	Director              []struct {
 		Filter string `json:"filter"`
@@ -81,10 +74,15 @@ type Session struct {
 		Tag    string `json:"tag"`
 		Thumb  string `json:"thumb,omitempty"`
 	} `json:"Role"`
-	User             SessionUser       `json:"User"`
 	Player           SessionPlayer     `json:"Player"`
-	Session          SessionStats      `json:"Session"`
 	TranscodeSession SessionTranscoder `json:"TranscodeSession"`
+	AddedAt          int               `json:"addedAt"`
+	AudienceRating   float64           `json:"audienceRating"`
+	Duration         int               `json:"duration"`
+	Index            int               `json:"index"`
+	ParentIndex      int               `json:"parentIndex"`
+	Rating           float64           `json:"rating"`
+	ViewOffset       int               `json:"viewOffset"`
 }
 
 // SessionMedia contains one record in a Session's Media list
@@ -92,20 +90,20 @@ type SessionMedia struct {
 	AudioProfile          string             `json:"audioProfile"`
 	ID                    string             `json:"id"`
 	VideoProfile          string             `json:"videoProfile"`
-	AudioChannels         int                `json:"audioChannels"`
 	AudioCodec            string             `json:"audioCodec"`
-	Bitrate               int                `json:"bitrate"`
 	Container             string             `json:"container"`
-	Duration              int                `json:"duration"`
-	Height                int                `json:"height"`
-	OptimizedForStreaming bool               `json:"optimizedForStreaming"`
 	Protocol              string             `json:"protocol"`
 	VideoCodec            string             `json:"videoCodec"`
 	VideoFrameRate        string             `json:"videoFrameRate"`
 	VideoResolution       string             `json:"videoResolution"`
-	Width                 int                `json:"width"`
-	Selected              bool               `json:"selected"`
 	Part                  []MediaSessionPart `json:"Part"`
+	AudioChannels         int                `json:"audioChannels"`
+	Bitrate               int                `json:"bitrate"`
+	Duration              int                `json:"duration"`
+	Height                int                `json:"height"`
+	Width                 int                `json:"width"`
+	OptimizedForStreaming bool               `json:"optimizedForStreaming"`
+	Selected              bool               `json:"selected"`
 }
 
 // MediaSessionPart contains one record in a MediaSession's Part list
@@ -113,44 +111,44 @@ type MediaSessionPart struct {
 	AudioProfile          string                   `json:"audioProfile"`
 	ID                    string                   `json:"id"`
 	VideoProfile          string                   `json:"videoProfile"`
-	Bitrate               int                      `json:"bitrate"`
 	Container             string                   `json:"container"`
+	Protocol              string                   `json:"protocol"`
+	Decision              string                   `json:"decision"`
+	Stream                []MediaSessionPartStream `json:"Stream"`
+	Bitrate               int                      `json:"bitrate"`
 	Duration              int                      `json:"duration"`
 	Height                int                      `json:"height"`
-	OptimizedForStreaming bool                     `json:"optimizedForStreaming"`
-	Protocol              string                   `json:"protocol"`
 	Width                 int                      `json:"width"`
-	Decision              string                   `json:"decision"`
+	OptimizedForStreaming bool                     `json:"optimizedForStreaming"`
 	Selected              bool                     `json:"selected"`
-	Stream                []MediaSessionPartStream `json:"Stream"`
 }
 
 // MediaSessionPartStream contains one stream (video, audio, subtitles) in a MediaSession's Part list
 type MediaSessionPartStream struct {
-	Bitrate              int     `json:"bitrate,omitempty"`
 	Codec                string  `json:"codec"`
-	Default              bool    `json:"default"`
 	DisplayTitle         string  `json:"displayTitle"`
 	ExtendedDisplayTitle string  `json:"extendedDisplayTitle"`
-	FrameRate            float64 `json:"frameRate,omitempty"`
-	Height               int     `json:"height,omitempty"`
 	ID                   string  `json:"id"`
 	Language             string  `json:"language"`
 	LanguageCode         string  `json:"languageCode"`
 	LanguageTag          string  `json:"languageTag"`
-	StreamType           int     `json:"streamType"`
-	Width                int     `json:"width,omitempty"`
 	Decision             string  `json:"decision"`
 	Location             string  `json:"location"`
 	AudioChannelLayout   string  `json:"audioChannelLayout,omitempty"`
 	BitrateMode          string  `json:"bitrateMode,omitempty"`
-	Channels             int     `json:"channels,omitempty"`
 	Profile              string  `json:"profile,omitempty"`
-	SamplingRate         int     `json:"samplingRate,omitempty"`
-	Selected             bool    `json:"selected,omitempty"`
 	Title                string  `json:"title,omitempty"`
 	Container            string  `json:"container,omitempty"`
 	Format               string  `json:"format,omitempty"`
+	Bitrate              int     `json:"bitrate,omitempty"`
+	FrameRate            float64 `json:"frameRate,omitempty"`
+	Height               int     `json:"height,omitempty"`
+	StreamType           int     `json:"streamType"`
+	Width                int     `json:"width,omitempty"`
+	Channels             int     `json:"channels,omitempty"`
+	SamplingRate         int     `json:"samplingRate,omitempty"`
+	Default              bool    `json:"default"`
+	Selected             bool    `json:"selected,omitempty"`
 }
 
 // SessionUser contains the user details inside a Session
@@ -183,21 +181,14 @@ type SessionPlayer struct {
 // SessionStats contains the session details inside a Session
 type SessionStats struct {
 	ID        string `json:"id"`
-	Bandwidth int    `json:"bandwidth"`
 	Location  string `json:"location"`
+	Bandwidth int    `json:"bandwidth"`
 }
 
 // SessionTranscoder contains the transcoder details inside a Session.
 // If the session doesn't transcode any media streams, all fields will be blank.
 type SessionTranscoder struct {
 	Key                     string  `json:"key"`
-	Throttled               bool    `json:"throttled"`
-	Complete                bool    `json:"complete"`
-	Progress                float64 `json:"progress"`
-	Size                    int     `json:"size"`
-	Speed                   float64 `json:"speed"`
-	Error                   bool    `json:"error"`
-	Duration                int     `json:"duration"`
 	Context                 string  `json:"context"`
 	SourceVideoCodec        string  `json:"sourceVideoCodec"`
 	SourceAudioCodec        string  `json:"sourceAudioCodec"`
@@ -208,10 +199,17 @@ type SessionTranscoder struct {
 	Container               string  `json:"container"`
 	VideoCodec              string  `json:"videoCodec"`
 	AudioCodec              string  `json:"audioCodec"`
+	Progress                float64 `json:"progress"`
+	Size                    int     `json:"size"`
+	Speed                   float64 `json:"speed"`
+	Duration                int     `json:"duration"`
 	AudioChannels           int     `json:"audioChannels"`
+	TimeStamp               float64 `json:"timeStamp"`
+	Throttled               bool    `json:"throttled"`
+	Complete                bool    `json:"complete"`
+	Error                   bool    `json:"error"`
 	TranscodeHwRequested    bool    `json:"transcodeHwRequested"`
 	TranscodeHwFullPipeline bool    `json:"transcodeHwFullPipeline"`
-	TimeStamp               float64 `json:"timeStamp"`
 }
 
 // GetTitle returns the title of the movie, tv episode being played.  For movies, this is just the title.
