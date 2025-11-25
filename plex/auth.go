@@ -4,94 +4,37 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"runtime"
-	"runtime/debug"
 	"sync"
+	"time"
 
-	"github.com/google/uuid"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func init() {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		defaultClientIdentity.Version = info.Main.Version
-	}
-	defaultClientIdentity.DeviceName, _ = os.Hostname()
-}
-
 const legacyAuthURL = "https://plex.tv/users/sign_in.xml"
+const tokenLifetime = 7 * 24 * time.Hour
+const baseURLV2 = "https://clients.plex.tv"
 
-// ClientIdentity identifies the client when using Plex username/password credentials.
-// Although this package provides a default, it is recommended to set this yourself.
-type ClientIdentity struct {
-	// Product is the name of the client product.
-	// Passed as X-Plex-Product header.
-	// In Authorized Devices, it is shown on line 3.
-	Product string
-	// Version is the version of the client application.
-	// Passed as X-Plex-Version header.
-	// In Authorized Devices, it is shown on line 2.
-	Version string
-	// Platform is the operating system or compiler of the client application.
-	// Passed as X-Plex-Platform header.
-	Platform string
-	// PlatformVersion is the version of the platform.
-	// Passed as X-Plex-Platform-Version header.
-	PlatformVersion string
-	// Device is a relatively friendly name for the client device.
-	// Passed as X-Plex-Device header.
-	// In Authorized Devices, it is shown on line 4.
-	Device string
-	// Model is a potentially less friendly identifier for the device model.
-	// Passed as X-Plex-Model header.
-	Model string
-	// DeviceVendor is the name of the device vendor.
-	// Passed as X-Plex-Device-Vendor header.
-	DeviceVendor string
-	// DeviceName is a friendly name for the client.
-	// Passed as X-Plex-Device-Name header.
-	// In Authorized Devices, it is shown on line 1.
-	DeviceName string
-	// Identifier is a unique identifier for the client.
-	// Passed as X-Plex-Client-Identifier header.
-	Identifier string
-}
-
-func (id ClientIdentity) populateRequest(req *http.Request) {
-	headers := map[string]string{
-		"X-Plex-Product":           id.Product,
-		"X-Plex-Version":           id.Version,
-		"X-Plex-Platform":          id.Platform,
-		"X-Plex-Platform-Version":  id.PlatformVersion,
-		"X-Plex-Device":            id.Device,
-		"X-Plex-Device-Vendor":     id.DeviceVendor,
-		"X-Plex-Device-Name":       id.DeviceName,
-		"X-Plex-Model":             id.Model,
-		"X-Plex-Client-Identifier": id.Identifier,
-	}
-	for key, value := range headers {
-		if value != "" {
-			req.Header.Set(key, value)
-		}
-	}
-}
-
-var defaultClientIdentity = ClientIdentity{
-	Product:         "github.com/clambin/mediaclients/plex",
-	Version:         "(devel)",
-	Device:          "plex",
-	Platform:        runtime.GOOS,
-	PlatformVersion: runtime.Version(),
-	Identifier:      uuid.New().String(),
+func AuthorizeDevice(ctx context.Context, httpClient *http.Client, username, password, clientID string, identity Device) (string, error) {
 }
 
 type tokenSource interface {
 	Token(context.Context) (string, error)
 }
+
+var (
+	_ tokenSource = (*fixedTokenSource)(nil)
+	_ tokenSource = (*refreshingTokenSource)(nil)
+)
 
 // fixedTokenSource returns a tokenSource that always returns the same token.
 type fixedTokenSource struct {
@@ -102,52 +45,163 @@ func (s *fixedTokenSource) Token(_ context.Context) (string, error) {
 	return s.token, nil
 }
 
-// legacyCredentialsTokenSource returns a tokenSource that authenticates with the legacy Plex API auth endpoint,
-// i.e., https://plex.tv/users/sign_in.xml
-type legacyCredentialsTokenSource struct {
+type refreshingTokenSource struct {
+	expiration time.Time
 	httpClient *http.Client
-	identity   ClientIdentity
-	username   string
-	password   string
-	token      string
-	authURL    string
 	lock       sync.Mutex
+	privateKey ed25519.PrivateKey
+	clientID   string
+	token      string
+	kid        string
+	baseURL    string
+	uploadKeys sync.Once
 }
 
-func (s *legacyCredentialsTokenSource) Token(ctx context.Context) (string, error) {
+func (s *refreshingTokenSource) Token(ctx context.Context) (string, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	// return cached token if available
-	if s.token != "" {
+	// use the cached token if it's available and not expired yet
+	if s.token != "" && time.Now().Before(s.expiration) {
 		return s.token, nil
 	}
 
-	// credentials are passed in the request body, as a url-encoded form
-	v := make(url.Values)
-	v.Set("user[login]", s.username)
-	v.Set("user[password]", s.password)
+	// generate keys & upload to plex
+	var err error
+	s.uploadKeys.Do(func() {
+		err = s.generateKeys(ctx)
+	})
+	if err != nil {
+		return "", fmt.Errorf("keys: %w", err)
+	}
 
-	// call the auth endpoint
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, cmp.Or(s.authURL, legacyAuthURL), bytes.NewBufferString(v.Encode()))
-	s.identity.populateRequest(req)
+	// upload the token if necessary
+	nonce, err := s.getNonce(ctx)
+	if err != nil {
+		return "", fmt.Errorf("nonce: %w", err)
+	}
+	// sign a jwt and send it to plex. response is the new token
+	if s.token, err = s.getToken(ctx, nonce); err == nil {
+		s.expiration = time.Now().Add(tokenLifetime)
+	}
+	return s.token, err
+}
+
+func (s *refreshingTokenSource) generateKeys(ctx context.Context) error {
+	// generate keypair
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return fmt.Errorf("generate keypair: %w", err)
+	}
+	s.privateKey = priv
+
+	// create a jwk from the public key
+	key, err := jwk.Import(pub)
+	if err != nil {
+		return fmt.Errorf("import key: %w", err)
+	}
+
+	// Assign a key ID (kid) using thumbprint
+	if err = jwk.AssignKeyID(key); err != nil {
+		return fmt.Errorf("assign key id: %w", err)
+	}
+	var ok bool
+	if s.kid, ok = key.KeyID(); !ok {
+		panic("key id not set")
+	}
+
+	// Set use (sig) and algorithm
+	_ = key.Set(jwk.KeyUsageKey, "sig")
+	_ = key.Set(jwk.KeyIDKey, s.kid)
+	_ = key.Set(jwk.AlgorithmKey, jwa.EdDSA().String())
+
+	// Marshal to JSON
+	jwkBody, err := json.MarshalIndent(map[string]any{"jwk": key}, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encode: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cmp.Or(s.baseURL, baseURLV2)+"/api/v2/auth/jwk", bytes.NewReader(jwkBody))
+	if err != nil {
+		return fmt.Errorf("new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Plex-Client-Identifier", s.clientID)
+	req.Header.Set("X-Plex-Token", s.token)
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("post: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusCreated {
+		errBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected status code: %d - %s (%s)", resp.StatusCode, resp.Status, errBody)
+	}
+	return nil
+}
+
+func (s *refreshingTokenSource) getNonce(ctx context.Context) (string, error) {
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, cmp.Or(s.baseURL, baseURLV2)+"/api/v2/auth/nonce", nil)
+	req.Header.Set("X-Plex-Client-Identifier", s.clientID)
+	req.Header.Set("Accept", "application/json")
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
-
-	// a successful response contains an XML document with an authentication token
-	if resp.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("http: %s", resp.Status)
-	}
-	var authResponse struct {
-		XMLName             xml.Name `xml:"user"`
-		AuthenticationToken string   `xml:"authenticationToken,attr"`
-	}
-	if err = xml.NewDecoder(resp.Body).Decode(&authResponse); err == nil {
-		s.token = authResponse.AuthenticationToken
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d - %s", resp.StatusCode, resp.Status)
 	}
 
-	return s.token, err
+	var response struct {
+		Nonce string `json:"nonce"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	return response.Nonce, nil
+}
+
+func (s *refreshingTokenSource) getToken(ctx context.Context, nonce string) (string, error) {
+	now := time.Now()
+	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.MapClaims{
+		"nonce": nonce,
+		"scope": "username,email,friendly_name",
+		"aud":   "plex.tv",
+		"iss":   s.clientID,
+		"iat":   now.Unix(),
+		"exp":   now.Add(tokenLifetime).Unix(),
+	})
+	token.Header["kid"] = s.kid
+
+	signedToken, err := token.SignedString(s.privateKey)
+	if err != nil {
+		return "", fmt.Errorf("sign: %w", err)
+	}
+
+	var body bytes.Buffer
+	if err = json.NewEncoder(&body).Encode(map[string]string{"jwt": signedToken}); err != nil {
+		return "", fmt.Errorf("encode: %w", err)
+	}
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, cmp.Or(s.baseURL, baseURLV2)+"/api/v2/auth/token", &body)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Plex-Client-Identifier", s.clientID)
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("post: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("post: unexpected status code: %d - %s (%s)", resp.StatusCode, resp.Status, string(b))
+	}
+
+	var response struct {
+		AuthToken string `json:"auth_token"`
+	}
+	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", fmt.Errorf("decode: %w", err)
+	}
+	return response.AuthToken, nil
 }
