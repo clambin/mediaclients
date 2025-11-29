@@ -1,13 +1,14 @@
 package plex
 
 import (
-	"cmp"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
-	"github.com/clambin/mediaclients/plex/plexhttp"
+	"github.com/clambin/mediaclients/plex/plexauth"
 )
 
 type Option func(*Client)
@@ -18,53 +19,40 @@ func WithHTTPClient(httpClient *http.Client) Option {
 	}
 }
 
-func WithRefreshingToken(httpClient *http.Client, initialToken string) Option {
-	return func(client *Client) {
-		// TODO: handle persistence
-		client.tokenSource = &refreshingTokenSource{
-			httpClient: cmp.Or(httpClient, http.DefaultClient),
-			clientID:   client.clientID,
-			token:      initialToken,
-		}
-	}
-}
-
 // Client calls the Plex APIs
 type Client struct {
 	httpClient  *http.Client
-	tokenSource tokenSource
+	tokenSource plexauth.AuthTokenSource
 	url         string
-	clientID    string
 }
 
-func New(url, token, clientID string, opts ...Option) *Client {
+func New(url string, tokenSource plexauth.AuthTokenSource, opts ...Option) *Client {
 	client := Client{
-		httpClient:  &http.Client{},
+		httpClient:  http.DefaultClient,
+		tokenSource: tokenSource,
 		url:         url,
-		clientID:    clientID,
-		tokenSource: &fixedTokenSource{token: token},
 	}
-	for _, o := range opts {
-		o(&client)
+	for _, opt := range opts {
+		opt(&client)
 	}
+
 	return &client
 }
 
 func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
-	token, err := c.tokenSource.Token(ctx)
-	if err != nil {
-		var zero T
-		return zero, fmt.Errorf("token: %w", err)
-	}
-
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.url+endpoint, nil)
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("X-Plex-Token", token)
-	req.Header.Add("X-Plex-Client-Identifier", c.clientID)
-
 	var response struct {
 		MediaContainer T `json:"MediaContainer"`
 	}
+
+	token, err := c.tokenSource.Token(ctx)
+	if err != nil {
+		return response.MediaContainer, fmt.Errorf("plex auth: %w", err)
+	}
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.url+endpoint, nil)
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("X-Plex-Token", token.String())
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return response.MediaContainer, err
@@ -75,12 +63,15 @@ func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return response.MediaContainer, plexhttp.Parse(resp)
+		// TODO: do errors match the Plex Cloud API?
+		return response.MediaContainer, plexauth.ParsePlexError(resp)
 	}
 
-	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	var buf bytes.Buffer
+	if err = json.NewDecoder(io.TeeReader(resp.Body, &buf)).Decode(&response); err != nil {
 		err = fmt.Errorf("decode: %w", err)
 	}
+	_ = buf
 
 	return response.MediaContainer, err
 }

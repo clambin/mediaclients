@@ -8,6 +8,7 @@ import (
 
 	"github.com/clambin/mediaclients/plex"
 	"github.com/clambin/mediaclients/plex/internal/testutil"
+	"github.com/clambin/mediaclients/plex/plexauth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +21,7 @@ func TestClient_Failures(t *testing.T) {
 	ctx := t.Context()
 	_, err := c.GetIdentity(ctx)
 	require.Error(t, err)
-	assert.Equal(t, "500 "+http.StatusText(http.StatusInternalServerError), err.Error())
+	assert.Equal(t, "plex: 500 Internal Server Error", err.Error())
 
 	s.Close()
 	_, err = c.GetIdentity(ctx)
@@ -44,5 +45,5 @@ func makeClientAndServer(h http.Handler) (*plex.Client, *httptest.Server) {
 		h = &testutil.TestServer
 	}
 	server := httptest.NewServer(h)
-	return plex.New(server.URL, plex.WithHTTPClient(http.DefaultClient), plex.WithToken("some-token")), server
+	return plex.New(server.URL, plexauth.NewFixedTokenSource("some-token"), plex.WithHTTPClient(&http.Client{})), server
 }

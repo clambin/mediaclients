@@ -11,46 +11,85 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
+	"strconv"
+	"strings"
 	"time"
 
-	"github.com/clambin/mediaclients/plex/plexhttp"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 var (
-	defaultHTTPClient = &http.Client{
-		Timeout:   15 * time.Second,
-		Transport: http.DefaultTransport,
+	// DefaultConfig contains the default configuration required to authenticate with Plex.
+	DefaultConfig = Config{
+		AuthURL:   "https://plex.tv",
+		AuthV2URL: "https://clients.plex.tv",
+		TokenTTL:  7 * 24 * time.Hour,
+		Scopes:    []string{"username", "email", "friendly_name", "restricted", "anonymous"},
+		aud:       "plex.tv",
+		ClientID:  uuid.New().String(),
 	}
 )
 
-type httpClientType struct{}
-
-func WithHTTPClient(ctx context.Context, httpClient *http.Client) context.Context {
-	return context.WithValue(ctx, httpClientType{}, httpClient)
+// ClientDevice identifies the client when using Plex username/password credentials.
+// Although this package provides a default, it is recommended to set this yourself.
+type ClientDevice struct {
+	// Product is the name of the client product.
+	// Passed as X-Plex-Product header.
+	// In Authorized Devices, it is shown on line 3.
+	Product string
+	// Version is the version of the client application.
+	// Passed as X-Plex-Version header.
+	// In Authorized Devices, it is shown on line 2.
+	Version string
+	// Platform is the operating system or compiler of the client application.
+	// Passed as X-Plex-Platform header.
+	Platform string
+	// PlatformVersion is the version of the platform.
+	// Passed as X-Plex-Platform-Version header.
+	PlatformVersion string
+	// Device is a relatively friendly name for the client device.
+	// Passed as X-Plex-ClientDevice header.
+	// In Authorized Devices, it is shown on line 4.
+	Device string
+	// Model is a potentially less friendly identifier for the device model.
+	// Passed as X-Plex-Model header.
+	Model string
+	// DeviceVendor is the name of the device vendor.
+	// Passed as X-Plex-ClientDevice-Vendor header.
+	DeviceVendor string
+	// DeviceName is a friendly name for the client.
+	// Passed as X-Plex-ClientDevice-Name header.
+	// In Authorized Devices, it is shown on line 1.
+	DeviceName string
 }
 
-func httpClient(ctx context.Context) *http.Client {
-	if c, ok := ctx.Value(httpClientType{}).(*http.Client); ok {
-		return c
+func (id ClientDevice) populateRequest(req *http.Request) {
+	headers := map[string]string{
+		"X-Plex-Product":             id.Product,
+		"X-Plex-Version":             id.Version,
+		"X-Plex-Platform":            id.Platform,
+		"X-Plex-Platform-Version":    id.PlatformVersion,
+		"X-Plex-ClientDevice":        id.Device,
+		"X-Plex-ClientDevice-Vendor": id.DeviceVendor,
+		"X-Plex-ClientDevice-Name":   id.DeviceName,
+		"X-Plex-Model":               id.Model,
 	}
-	return defaultHTTPClient
+	for key, value := range headers {
+		if value != "" {
+			req.Header.Set(key, value)
+		}
+	}
 }
 
-// DefaultAuthConfig contains the default configuration required to authenticate with Plex.
-var DefaultAuthConfig = AuthConfig{
-	AuthURL:   "https://plex.tv/users/sign_in.xml",
-	AuthV2URL: "https://clients.plex.tv",
-	TokenTTL:  7 * 24 * time.Hour,
-	Scope:     "username,email,friendly_name",
-	aud:       "plex.tv",
-}
-
-// AuthConfig contains the configuration required to authenticate with Plex.
-type AuthConfig struct {
-	// AuthURL is the full URL of the legacy Plex authentication endpoint.
+// Config contains the configuration required to authenticate with Plex.
+type Config struct {
+	// Device information used during username/password authentication.
+	Device ClientDevice
+	// AuthURL is the base URL of the legacy Plex authentication endpoint.
 	// It is used for initial username/password authentication.
 	// This should normally not be changed.
 	AuthURL string
@@ -59,12 +98,9 @@ type AuthConfig struct {
 	AuthV2URL string
 	// ClientID is the unique identifier of the client application.
 	ClientID string
-	// Scope is a comma-separated list of scopes to request.
-	// Leaving this public for future use, although it is unlikely to need to be changed.
-	Scope string
-	aud   string
-	// Device information used during username/password authentication.
-	Device Device
+	aud      string
+	// Scopes is a list of scopes to request.
+	Scopes []string
 	// TokenTTL is the duration of the authentication token.
 	// Defaults to 7 days, in line with Plex specifications.
 	// Normally, this should not need to be changed.
@@ -72,80 +108,133 @@ type AuthConfig struct {
 }
 
 // WithClientID sets the client ID.
-func (a AuthConfig) WithClientID(clientID string) AuthConfig {
-	a.ClientID = clientID
-	return a
+func (c Config) WithClientID(clientID string) Config {
+	c.ClientID = clientID
+	return c
 }
 
-// WithDevice sets the device information used during username/password authentication.
-// See the [Device] type for details on what each field means.
-func (a AuthConfig) WithDevice(device Device) AuthConfig {
-	a.Device = device
-	return a
+// WithClientDevice sets the device information used during username/password authentication.
+// See the [ClientDevice] type for details on what each field means.
+func (c Config) WithClientDevice(device ClientDevice) Config {
+	c.Device = device
+	return c
 }
 
-// WithTokenTTL sets the duration of the authentication token.
-func (a AuthConfig) WithTokenTTL(ttl time.Duration) AuthConfig {
-	a.TokenTTL = ttl
-	return a
-}
-
-// AuthorizeDevice authenticates with Plex using the legacy username/password authentication endpoint and
-// returns a valid Plex token.
+// RegisterWithCredentials registers a device using username/password credentials and returns a Token.
 //
-// This is the only implemented authentication method when an application does not yet have a valid token.
-// After a successful authentication, the token should be managed by uploading a public key to the Plex server through
-// [AuthConfig.GenerateAndUploadPublicKey] or [AuthConfig.UploadPublicKey] and refreshed using [AuthConfig.GetAuthToken].
-func (a AuthConfig) AuthorizeDevice(ctx context.Context, username, password string) (string, error) {
-	// credentials are passed in the request body, as url-encoded form
+// Note: once a JWTToken has been requested for the ClientID, further calls to RegisterWithCredentials
+// for the same ClientID will fail.
+func (c Config) RegisterWithCredentials(ctx context.Context, username, password string) (AuthToken, error) {
+	// credentials are passed in the request body in url-encoded form
 	v := make(url.Values)
 	v.Set("user[login]", username)
 	v.Set("user[password]", password)
 
 	// call the auth endpoint
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.AuthURL, bytes.NewBufferString(v.Encode()))
+	resp, err := c.do(ctx, http.MethodPost, c.AuthURL+"/users/sign_in.xml", strings.NewReader(v.Encode()), http.StatusCreated, func(req *http.Request) {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Accept", "application/xml")
+		c.Device.populateRequest(req)
+	})
 	if err != nil {
-		return "", fmt.Errorf("new request: %w", err)
-	}
-	a.Device.populateRequest(req)
-	req.Header.Set("X-Plex-Client-Identifier", a.ClientID)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Accept", "application/xml")
-	resp, err := httpClient(ctx).Do(req)
-	if err != nil {
-		return "", err
+		return "", fmt.Errorf("register: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	// a successful response contains an XML document with an authentication token
-	if resp.StatusCode != http.StatusCreated {
-		return "", plexhttp.Parse(resp)
-	}
 	var authResponse struct {
 		XMLName             xml.Name `xml:"user"`
 		AuthenticationToken string   `xml:"authenticationToken,attr"`
 	}
 	err = xml.NewDecoder(resp.Body).Decode(&authResponse)
-	return authResponse.AuthenticationToken, err
+	return AuthToken(authResponse.AuthenticationToken), err
 }
 
-// GenerateAndUploadPublicKey is a helper function that generates a new ed25519 keypair, uploads the private key to
-// the Plex server and returns the private key and associated public key ID, to be used for generating a new Token.
+// RegisterWithPIN is a helper function that registers a device using the PIN authentication flow and gets a Token.
 //
-// Token must be a valid Plex token, either generated by [AuthConfig.AuthorizeDevice] or
-// obtained from a previous [AuthConfig.GetAuthToken] call.
-func (a AuthConfig) GenerateAndUploadPublicKey(ctx context.Context, token string) (ed25519.PrivateKey, string, error) {
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+// The callback can be used to inform the user/application of the URL to confirm the PINRequest.
+//
+// Note: once a JWTToken has been requested for the ClientID, further calls to RegisterWithPIN
+// for the same ClientID will fail.
+func (c Config) RegisterWithPIN(ctx context.Context, callback func(PINResponse, string), pollInterval time.Duration) (AuthToken, error) {
+	pinResponse, pinURL, err := c.PINRequest(ctx)
+	if err != nil {
+		return "", fmt.Errorf("pin: %w", err)
+	}
+	callback(pinResponse, pinURL)
+	for {
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(pollInterval):
+			token, _, err := c.ValidatePIN(ctx, pinResponse.Id)
+			if err == nil && token != "" {
+				return token, nil
+			}
+		}
+	}
+}
+
+// PINRequest requests a PINRequest from Plex.
+func (c Config) PINRequest(ctx context.Context) (PINResponse, string, error) {
+	// TODO: support strong=true, but need to figure out the right format for the pin url
+	resp, err := c.do(ctx, http.MethodPost, c.AuthV2URL+"/api/v2/pins?strong=false", nil, http.StatusCreated, func(req *http.Request) {
+		c.Device.populateRequest(req)
+	})
+	if err != nil {
+		return PINResponse{}, "", fmt.Errorf("pin request: %w", err)
+	}
+	var response PINResponse
+	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return PINResponse{}, "", fmt.Errorf("decode: %w", err)
+	}
+
+	// TODO: url works, but doesn't match the docs
+	return response, "https://plex.tv/pin?pin=" + response.Code, nil
+}
+
+// ValidatePIN checks if the user has confirmed the PINRequest.  It returns the full Plex response.
+// When the user has confirmed the PINRequest, the AuthToken field will be populated.
+func (c Config) ValidatePIN(ctx context.Context, id int) (AuthToken, ValidatePINResponse, error) {
+	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/api/v2/pins/"+strconv.Itoa(id), nil, http.StatusOK)
+	if err != nil {
+		return "", ValidatePINResponse{}, fmt.Errorf("validate pin: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	var response ValidatePINResponse
+	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", ValidatePINResponse{}, fmt.Errorf("decode: %w", err)
+	}
+	var token AuthToken
+	if response.AuthToken != nil {
+		token = AuthToken(*response.AuthToken)
+	}
+	return token, response, err
+}
+
+// GenerateAndUploadPublicKey is a helper function to set up JWT Tokens.
+// It generates a new ed25519 keypair, uploads the private key to the Plex server and
+// returns the private key and associated public key ID to be used for generating a new JWT token.
+//
+// Token must be a valid Plex token, either generated by [Config.RegisterWithCredentials]/[Config.RegisterWithPIN] or
+// obtained from a previous [Config.JWTToken] call.
+func (c Config) GenerateAndUploadPublicKey(ctx context.Context, token AuthToken) (ed25519.PrivateKey, string, error) {
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, "", fmt.Errorf("generate keypair: %w", err)
 	}
-	keyID, err := a.UploadPublicKey(ctx, pub, token)
-	return priv, keyID, err
+	keyID, err := c.UploadPublicKey(ctx, publicKey, token)
+	return privateKey, keyID, err
 }
 
 // UploadPublicKey uploads a public key to the Plex server. It returns a generated key ID for the public key,
-// which can be used to generate a new token with [AuthConfig.GetAuthToken].
-func (a AuthConfig) UploadPublicKey(ctx context.Context, publicKey ed25519.PublicKey, token string) (string, error) {
+// which can be used to generate a new token with [Config.JWTToken].
+func (c Config) UploadPublicKey(ctx context.Context, publicKey ed25519.PublicKey, token AuthToken) (string, error) {
+	// check we have a valid token
+	if !token.IsValid() {
+		return "", ErrInvalidToken
+	}
+
 	// create a jwk from the public key
 	jwKey, err := jwk.Import(publicKey)
 	if err != nil {
@@ -165,69 +254,64 @@ func (a AuthConfig) UploadPublicKey(ctx context.Context, publicKey ed25519.Publi
 	jwkBody, _ := json.Marshal(map[string]any{"jwk": jwKey})
 
 	// upload the key to the Plex server
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.AuthV2URL+"/api/v2/auth/jwk", bytes.NewReader(jwkBody))
+	resp, err := c.do(ctx, http.MethodPost, c.AuthV2URL+"/api/v2/auth/jwk", bytes.NewReader(jwkBody), http.StatusCreated, func(req *http.Request) {
+		req.Header.Set("X-Plex-Token", token.String())
+	})
 	if err != nil {
-		return "", fmt.Errorf("new request: %w", err)
+		return "", fmt.Errorf("jwk: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("X-Plex-Client-Identifier", a.ClientID)
-	req.Header.Set("X-Plex-Token", token)
-	resp, err := httpClient(ctx).Do(req)
-	if err != nil {
-		return "", plexhttp.Parse(resp)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusCreated {
-		return "", plexhttp.Parse(resp)
-	}
+	_ = resp.Body.Close()
 	return keyID, nil
 }
 
-// GetAuthToken generates a new authentication token using the provided private key (for the uploaded public key)
-// and key ID (returned by [AuthConfig.GenerateAndUploadPublicKey] or [AuthConfig.UploadPublicKey]).
-func (a AuthConfig) GetAuthToken(ctx context.Context, privateKey ed25519.PrivateKey, keyID string) (string, error) {
-	nonce, err := a.getNonce(ctx)
+// JWTToken is a new authentication mechanism introduced in Plex Cloud, based on JSON Web Tokens (JWT).
+//
+// To create a JWTToken, you must first generate a new ed25519 keypair and upload the public key to Plex
+// (using [Config.GenerateAndUploadPublicKey] or [Config.UploadPublicKey], using a valid Plex token).
+// You can then use the private key and the public key's ID to generate a new JWTToken.
+//
+// Note: a JWTToken can only be used to access the Plex Cloud API; it cannot be used to access Plex Media Servers.
+// Instead, you can use a JWTToken to look up a Plex Media Server (PMS) (e.g., using devices.xml/devices.json)
+// to find the PMS's Access Token.
+//
+// This allows clients to access a PMS without re-registering with the Plex credentials
+// (i.e., [Config.RegisterWithCredentials]) or user intervention (i.e., [Config.RegisterWithPIN]).
+//
+// This does require persistence, as the Client ID, private Key and public key ID must be kept in sync with Plex Cloud.
+//
+// JWTTokens are valid for 7 days.
+//
+// Note: once a JWTToken has been requested for the ClientID, further requests to re-register that ClientID
+// ([Config.RegisterWithCredentials]/[Config.RegisterWithPIN]) will fail.
+func (c Config) JWTToken(ctx context.Context, privateKey ed25519.PrivateKey, keyID string) (JWTToken, error) {
+	nonce, err := c.nonce(ctx)
 	if err != nil {
-		return "", fmt.Errorf("get nonce: %w", err)
+		return JWTToken{}, fmt.Errorf("get nonce: %w", err)
 	}
 	// create a jwt
-	now := time.Now()
-	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.MapClaims{
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.MapClaims{
 		"nonce": nonce,
-		"scope": a.Scope,
-		"aud":   a.aud,
-		"iss":   a.ClientID,
-		"iat":   now.Unix(),
-		"exp":   now.Add(a.TokenTTL).Unix(),
+		"scope": strings.Join(c.Scopes, ","),
+		"aud":   c.aud,
+		"iss":   c.ClientID,
 	})
-	// kid has to be in the header, not the claims.
-	token.Header["kid"] = keyID
-
-	// sign the token
-	signedToken, err := token.SignedString(privateKey)
+	// the key ID has to be in the header, not the claims.
+	jwtToken.Header["kid"] = keyID
+	// sign the jwt
+	signedJWToken, err := jwtToken.SignedString(privateKey)
 	if err != nil {
-		return "", fmt.Errorf("sign: %w", err)
+		return JWTToken{}, fmt.Errorf("sign: %w", err)
 	}
-
-	return a.requestToken(ctx, signedToken)
+	// request a new jwtToken
+	return c.jwtToken(ctx, signedJWToken)
 }
 
-func (a AuthConfig) getNonce(ctx context.Context) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.AuthV2URL+"/api/v2/auth/nonce", nil)
+func (c Config) nonce(ctx context.Context) (string, error) {
+	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/api/v2/auth/nonce", nil, http.StatusOK)
 	if err != nil {
-		return "", fmt.Errorf("new request: %w", err)
-	}
-	req.Header.Set("X-Plex-Client-Identifier", a.ClientID)
-	req.Header.Set("Accept", "application/json")
-	resp, err := httpClient(ctx).Do(req)
-	if err != nil {
-		return "", plexhttp.Parse(resp)
+		return "", fmt.Errorf("nonce: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return "", plexhttp.Parse(resp)
-	}
 
 	var response struct {
 		Nonce string `json:"nonce"`
@@ -238,87 +322,88 @@ func (a AuthConfig) getNonce(ctx context.Context) (string, error) {
 	return response.Nonce, nil
 }
 
-func (a AuthConfig) requestToken(ctx context.Context, signedToken string) (string, error) {
+func (c Config) jwtToken(ctx context.Context, signedToken string) (JWTToken, error) {
 	// send the signed token to the auth endpoint
 	var body bytes.Buffer
-	if err := json.NewEncoder(&body).Encode(map[string]string{"jwt": signedToken}); err != nil {
-		return "", fmt.Errorf("encode: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.AuthV2URL+"/api/v2/auth/token", &body)
+	_ = json.NewEncoder(&body).Encode(map[string]string{"jwt": signedToken})
+	resp, err := c.do(ctx, http.MethodPost, c.AuthV2URL+"/api/v2/auth/token", &body, http.StatusOK)
 	if err != nil {
-		return "", fmt.Errorf("new request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("X-Plex-Client-Identifier", a.ClientID)
-	resp, err := httpClient(ctx).Do(req)
-	if err != nil {
-		return "", plexhttp.Parse(resp)
+		return JWTToken{}, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("post: unexpected status code: %d - %s (%s)", resp.StatusCode, resp.Status, string(b))
-	}
 
 	// extract the new token from the response
 	var response struct {
 		AuthToken string `json:"auth_token"`
 	}
 	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return "", fmt.Errorf("decode: %w", err)
+		return JWTToken{}, fmt.Errorf("decode: %w", err)
 	}
-	return response.AuthToken, nil
+	jwtToken := JWTToken{
+		AuthToken:  AuthToken(response.AuthToken),
+		expiration: time.Now().Add(c.TokenTTL),
+	}
+	return jwtToken, nil
 }
 
-// Device identifies the client when using Plex username/password credentials.
-// Although this package provides a default, it is recommended to set this yourself.
-type Device struct {
-	// Product is the name of the client product.
-	// Passed as X-Plex-Product header.
-	// In Authorized Devices, it is shown on line 3.
-	Product string
-	// Version is the version of the client application.
-	// Passed as X-Plex-Version header.
-	// In Authorized Devices, it is shown on line 2.
-	Version string
-	// Platform is the operating system or compiler of the client application.
-	// Passed as X-Plex-Platform header.
-	Platform string
-	// PlatformVersion is the version of the platform.
-	// Passed as X-Plex-Platform-Version header.
-	PlatformVersion string
-	// Device is a relatively friendly name for the client device.
-	// Passed as X-Plex-Device header.
-	// In Authorized Devices, it is shown on line 4.
-	Device string
-	// Model is a potentially less friendly identifier for the device model.
-	// Passed as X-Plex-Model header.
-	Model string
-	// DeviceVendor is the name of the device vendor.
-	// Passed as X-Plex-Device-Vendor header.
-	DeviceVendor string
-	// DeviceName is a friendly name for the client.
-	// Passed as X-Plex-Device-Name header.
-	// In Authorized Devices, it is shown on line 1.
-	DeviceName string
+type requestFormatter func(*http.Request)
+
+func (c Config) do(ctx context.Context, method string, url string, body io.Reader, wantStatusCode int, formatters ...requestFormatter) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	if err != nil {
+		return nil, fmt.Errorf("new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept-Language", "en-US")
+	req.Header.Set("X-Plex-Client-Identifier", c.ClientID)
+	for _, formatter := range formatters {
+		formatter(req)
+	}
+	resp, err := HTTPClient(ctx).Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != wantStatusCode {
+		defer func() { _ = resp.Body.Close() }()
+		return nil, ParsePlexError(resp)
+	}
+	return resp, nil
 }
 
-func (id Device) populateRequest(req *http.Request) {
-	headers := map[string]string{
-		"X-Plex-Product":          id.Product,
-		"X-Plex-Version":          id.Version,
-		"X-Plex-Platform":         id.Platform,
-		"X-Plex-Platform-Version": id.PlatformVersion,
-		"X-Plex-Device":           id.Device,
-		"X-Plex-Device-Vendor":    id.DeviceVendor,
-		"X-Plex-Device-Name":      id.DeviceName,
-		"X-Plex-Model":            id.Model,
+// The following functions aren't technically authentication-related.
+
+// RegisteredDevices returns all devices registered under the provided token
+func (c Config) RegisteredDevices(ctx context.Context, token Token) ([]RegisteredDevice, error) {
+	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/devices.xml", nil, http.StatusOK, func(req *http.Request) {
+		req.Header.Set("Accept", "application/xml")
+		req.Header.Set("X-Plex-Token", token.String())
+	})
+	if err != nil {
+		return nil, fmt.Errorf("devices: %w", err)
 	}
-	for key, value := range headers {
-		if value != "" {
-			req.Header.Set(key, value)
-		}
+	defer func() { _ = resp.Body.Close() }()
+
+	var response struct {
+		XMLName       xml.Name           `xml:"MediaContainer"`
+		PublicAddress string             `xml:"publicAddress,attr"`
+		Devices       []RegisteredDevice `xml:"Device"`
 	}
+	if err = xml.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("decode: %w", err)
+	}
+	return response.Devices, nil
+}
+
+// MediaServers returns all Plex Media Servers registered under the provided token
+func (c Config) MediaServers(ctx context.Context, token Token) ([]RegisteredDevice, error) {
+	// get all devices
+	devices, err := c.RegisteredDevices(ctx, token)
+	if err == nil {
+		// remove any non-Plex Media Server devices
+		devices = slices.DeleteFunc(devices, func(device RegisteredDevice) bool {
+			return device.Product != "Plex Media Server"
+		})
+	}
+	return devices, err
 }

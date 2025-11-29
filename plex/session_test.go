@@ -11,7 +11,7 @@ import (
 
 func TestPlexClient_GetStats(t *testing.T) {
 	c, s := makeClientAndServer(nil)
-	defer s.Close()
+	t.Cleanup(s.Close)
 
 	sessions, err := c.GetSessions(context.Background())
 	require.NoError(t, err)

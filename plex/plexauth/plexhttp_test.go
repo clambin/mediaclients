@@ -1,4 +1,4 @@
-package plexhttp
+package plexauth
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewHTTPError(t *testing.T) {
+func TestParseError(t *testing.T) {
 	tests := []struct {
 		name       string
 		resp       *http.Response
@@ -22,16 +22,16 @@ func TestNewHTTPError(t *testing.T) {
 				StatusCode: http.StatusBadRequest,
 				Body:       io.NopCloser(bytes.NewBufferString(`{"error":"invalid input"}`)),
 			},
-			wantErrStr: "400 Bad Request: invalid input",
+			wantErrStr: "plex: invalid input",
 		},
 		{
 			name: "auth - json body parsed",
 			resp: &http.Response{
 				Status:     "401 Unauthorized",
 				StatusCode: http.StatusUnauthorized,
-				Body:       io.NopCloser(bytes.NewBufferString(`{"error":"invalid token"}`)),
+				Body:       io.NopCloser(bytes.NewBufferString(`{"errors": [ {"code":1001, "message": "invalid user"} ] }`)),
 			},
-			wantErrStr: "401 Unauthorized: invalid token",
+			wantErrStr: "plex: 1001 - invalid user",
 		},
 		{
 			name: "non-json body ignored",
@@ -40,7 +40,7 @@ func TestNewHTTPError(t *testing.T) {
 				StatusCode: http.StatusInternalServerError,
 				Body:       io.NopCloser(bytes.NewBufferString("not-json")),
 			},
-			wantErrStr: "500 Internal Server Error",
+			wantErrStr: "plex: 500 Internal Server Error",
 		},
 		{
 			name: "no body",
@@ -48,13 +48,13 @@ func TestNewHTTPError(t *testing.T) {
 				Status:     "500 Internal Server Error",
 				StatusCode: http.StatusInternalServerError,
 			},
-			wantErrStr: "500 Internal Server Error",
+			wantErrStr: "plex: 500 Internal Server Error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.EqualError(t, Parse(tt.resp), tt.wantErrStr)
+			assert.EqualError(t, ParsePlexError(tt.resp), tt.wantErrStr)
 		})
 	}
 }

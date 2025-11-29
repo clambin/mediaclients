@@ -10,7 +10,7 @@ import (
 
 func TestPlexClient_GetIdentity(t *testing.T) {
 	c, s := makeClientAndServer(nil)
-	defer s.Close()
+	t.Cleanup(s.Close)
 
 	identity, err := c.GetIdentity(context.Background())
 	require.NoError(t, err)

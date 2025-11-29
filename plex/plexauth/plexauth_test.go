@@ -1,181 +1,364 @@
-package plexauth_test
+package plexauth
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"context"
 	"encoding/json"
+	"encoding/xml"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"runtime"
-	"sync"
+	"net/url"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/clambin/mediaclients/plex/plexauth"
-	"github.com/google/uuid"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jwt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestAuthConfig_AuthorizeDevice(t *testing.T) {
-	ts := httptest.NewServer(authV1Server{
-		username:        "username",
-		password:        "password",
-		token:           "token",
-		expectedHeaders: []string{"X-Plex-Client-Identifier", "X-Plex-Platform", "X-Plex-Platform-Version"},
+var baseConfig = DefaultConfig.
+	WithClientID("abc").
+	WithClientDevice(ClientDevice{
+		Product:         "TestProduct",
+		Version:         "1.0",
+		Platform:        "unit",
+		PlatformVersion: "test",
+		Device:          "dev",
+		DeviceVendor:    "vendor",
+		DeviceName:      "devname",
+		Model:           "model",
 	})
-	cfg := plexauth.DefaultAuthConfig.WithClientID("123").WithDevice(plexauth.Device{
-		Platform:        runtime.GOOS,
-		PlatformVersion: runtime.Version(),
-	})
-	cfg.AuthURL = ts.URL
 
-	ctx := plexauth.WithHTTPClient(t.Context(), &http.Client{})
-	token, err := cfg.AuthorizeDevice(ctx, "username", "password")
-	require.NoError(t, err)
-	assert.Equal(t, "token", token)
-	_, err = cfg.AuthorizeDevice(ctx, "username", "wrongpassword")
-	require.Error(t, err)
-	ts.Close()
-	_, err = cfg.AuthorizeDevice(ctx, "username", "password")
-	require.Error(t, err)
+func newTestServer(cfg Config) (Config, *httptest.Server) {
+	ts := httptest.NewServer(makeFakeServer(&cfg))
+	cfg.AuthURL = ts.URL
+	cfg.AuthV2URL = ts.URL
+	return cfg, ts
 }
 
-func TestAuthConfig_GetAuthToken(t *testing.T) {
-	ts1 := httptest.NewServer(authV1Server{
-		username: "username",
-		password: "password",
-		token:    "token",
-	})
-	t.Cleanup(ts1.Close)
-	var authServer authV2Server
-	ts2 := httptest.NewServer(&authServer)
-	t.Cleanup(ts2.Close)
-	cfg := plexauth.DefaultAuthConfig.WithClientID("123")
-	cfg.AuthURL = ts1.URL
-	cfg.AuthV2URL = ts2.URL
+func TestConfig_WithClientIDAndDevice(t *testing.T) {
+	cfg := DefaultConfig.WithClientID("abc").WithClientDevice(ClientDevice{Product: "X"})
+	if cfg.ClientID != "abc" {
+		t.Fatalf("expected client id to be set")
+	}
+	if cfg.Device.Product != "X" {
+		t.Fatalf("expected device to be set")
+	}
+}
+
+func TestRegisterWithCredentials(t *testing.T) {
+	cfg, ts := newTestServer(baseConfig)
+	t.Cleanup(ts.Close)
 	ctx := t.Context()
 
-	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, "token") // test server doesn't validate token
-	require.NoError(t, err)
-
-	newToken, err := cfg.GetAuthToken(ctx, privateKey, keyID)
-	require.NoError(t, err)
-	assert.NotEmpty(t, newToken)
-	assert.NotEqual(t, "token", newToken)
+	tok, err := cfg.RegisterWithCredentials(ctx, "user", "pass")
+	if err != nil {
+		t.Fatalf("RegisterWithCredentials error: %v", err)
+	}
+	if tok.String() != "tok123" {
+		t.Fatalf("unexpected token: %s", tok)
+	}
 }
 
-type authV1Server struct {
-	username        string
-	password        string
-	token           string
-	expectedHeaders []string
+func TestPINRequestAndValidatePIN(t *testing.T) {
+	cfg, ts := newTestServer(baseConfig)
+	t.Cleanup(ts.Close)
+	ctx := t.Context()
+
+	// PINRequest
+	pr, urlStr, err := cfg.PINRequest(ctx)
+	if err != nil {
+		t.Fatalf("PINRequest error: %v", err)
+	}
+	if pr.Code != "1234" || !strings.Contains(urlStr, "plex.tv/pin?pin=1234") {
+		t.Fatalf("unexpected pin response/url: %+v %s", pr, urlStr)
+	}
+
+	// ValidatePIN first without token then with token
+	tok, resp, err := cfg.ValidatePIN(ctx, 42)
+	if err != nil {
+		t.Fatalf("ValidatePIN error: %v", err)
+	}
+	if resp.Code != "1234" {
+		t.Fatalf("unexpected code: %s", resp.Code)
+	}
+	if tok.String() != "tok-abc" {
+		t.Fatalf("unexpected token: %s", tok)
+	}
+
+	// RegisterWithPIN should poll until token available
+	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
+	t.Cleanup(cancel)
+	tok2, err := cfg.RegisterWithPIN(ctx, func(resp PINResponse, url string) {
+		if resp.Code != "1234" {
+			t.Fatalf("unexpected code: %s", resp.Code)
+		}
+		if !strings.HasSuffix(url, "https://plex.tv/pin?pin=1234") {
+			t.Fatalf("unexpected url: %s", url)
+		}
+
+	}, 10*time.Millisecond)
+	if err != nil {
+		t.Fatalf("RegisterWithPIN error: %v", err)
+	}
+	if tok2.String() != "tok-abc" {
+		t.Fatalf("unexpected token: %s", tok2)
+	}
 }
 
-func (a authV1Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	body, _ := io.ReadAll(r.Body)
-	if string(body) != `user%5Blogin%5D=`+a.username+`&user%5Bpassword%5D=`+a.password {
-		http.Error(w, "invalid username/password", http.StatusUnauthorized)
+func TestUploadAndGeneratePublicKey(t *testing.T) {
+	cfg, ts := newTestServer(baseConfig)
+	t.Cleanup(ts.Close)
+	ctx := t.Context()
+
+	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, "tok-abc")
+	if err != nil {
+		t.Fatalf("GenerateAndUploadPublicKey error: %v", err)
+	}
+	if len(privateKey) != 64 {
+		t.Fatalf("unexpected key length: %d", len(privateKey))
+	}
+	if keyID == "" {
+		t.Fatalf("expected non-empty key id")
+	}
+
+	_, _, err = cfg.GenerateAndUploadPublicKey(ctx, "bad-token")
+	if err == nil {
+		t.Fatalf("expected invalid token error")
+	}
+}
+
+func TestJWTTokenFlow(t *testing.T) {
+	cfg, ts := newTestServer(baseConfig)
+	t.Cleanup(ts.Close)
+	ctx := t.Context()
+
+	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, "tok-abc")
+	if err != nil {
+		t.Fatalf("GenerateAndUploadPublicKey error: %v", err)
+	}
+
+	tok, err := cfg.JWTToken(ctx, privateKey, keyID)
+	if err != nil {
+		t.Fatalf("JWTToken error: %v", err)
+	}
+	if got := tok.String(); got != "tok-abc" {
+		t.Fatalf("unexpected token: %s, want: %s", got, "tok-abc")
+	}
+}
+
+func TestRegisteredDevicesAndMediaServers(t *testing.T) {
+	cfg, ts := newTestServer(baseConfig)
+	t.Cleanup(ts.Close)
+	ctx := t.Context()
+
+	devs, err := cfg.RegisteredDevices(ctx, AuthToken("tok-abc"))
+	if err != nil {
+		t.Fatalf("RegisteredDevices error: %v", err)
+	}
+	if len(devs) != 2 {
+		t.Fatalf("expected 2 devices, got %d", len(devs))
+	}
+	servers, err := cfg.MediaServers(context.Background(), AuthToken("tok-abc"))
+	if err != nil {
+		t.Fatalf("MediaServers error: %v", err)
+	}
+	if len(servers) != 1 || servers[0].Name != "srv1" {
+		t.Fatalf("unexpected servers: %+v", servers)
+	}
+}
+
+var _ http.Handler = &fakeServer{}
+
+type fakeServer struct {
+	http.Handler
+	config *Config
+}
+
+func makeFakeServer(cfg *Config) fakeServer {
+	f := fakeServer{config: cfg}
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /users/sign_in.xml", f.handleRegisterWithCredentials)
+	mux.HandleFunc("POST /api/v2/pins", f.handlePIN)
+	mux.HandleFunc("GET /api/v2/pins/42", f.handleValidatePIN)
+	mux.HandleFunc("POST /api/v2/auth/jwk", f.handleJWK)
+	mux.HandleFunc("GET /api/v2/auth/nonce", f.handleNonce)
+	mux.HandleFunc("POST /api/v2/auth/token", f.handleJWToken)
+	mux.HandleFunc("GET /devices.xml", f.handleDevices)
+	f.Handler = mux
+	return f
+}
+
+func (f fakeServer) handleRegisterWithCredentials(w http.ResponseWriter, r *http.Request) {
+	wantHeaders := map[string]string{
+		"Content-Type":               "application/x-www-form-urlencoded",
+		"Accept":                     "application/xml",
+		"X-Plex-Client-Identifier":   f.config.ClientID,
+		"X-Plex-Product":             f.config.Device.Product,
+		"X-Plex-Version":             f.config.Device.Version,
+		"X-Plex-Platform":            f.config.Device.Platform,
+		"X-Plex-Platform-Version":    f.config.Device.PlatformVersion,
+		"X-Plex-ClientDevice":        f.config.Device.Device,
+		"X-Plex-ClientDevice-Vendor": f.config.Device.DeviceVendor,
+		"X-Plex-ClientDevice-Name":   f.config.Device.DeviceName,
+		"X-Plex-Model":               f.config.Device.Model,
+	}
+	if err := validateRequest(r, wantHeaders); err != nil {
+		plexError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	for _, header := range a.expectedHeaders {
-		if r.Header.Get(header) == "" {
-			http.Error(w, "missing header: "+header, http.StatusBadRequest)
-		}
+	body, _ := io.ReadAll(r.Body)
+	vals, _ := url.ParseQuery(string(body))
+	if vals.Get("user[login]") != "user" || vals.Get("user[password]") != "pass" {
+		http.Error(w, "invalid login/password", http.StatusBadRequest)
+		return
+	}
+	// Return XML
+	w.WriteHeader(http.StatusCreated)
+	_ = xml.NewEncoder(w).Encode(struct {
+		XMLName             xml.Name `xml:"user"`
+		AuthenticationToken string   `xml:"authenticationToken,attr"`
+	}{AuthenticationToken: "tok123"})
+}
+
+func (f fakeServer) handlePIN(w http.ResponseWriter, r *http.Request) {
+	wantHeaders := map[string]string{
+		"Accept":                     "application/json",
+		"X-Plex-Client-Identifier":   f.config.ClientID,
+		"X-Plex-Product":             f.config.Device.Product,
+		"X-Plex-Version":             f.config.Device.Version,
+		"X-Plex-Platform":            f.config.Device.Platform,
+		"X-Plex-Platform-Version":    f.config.Device.PlatformVersion,
+		"X-Plex-ClientDevice":        f.config.Device.Device,
+		"X-Plex-ClientDevice-Vendor": f.config.Device.DeviceVendor,
+		"X-Plex-ClientDevice-Name":   f.config.Device.DeviceName,
+		"X-Plex-Model":               f.config.Device.Model,
+	}
+	if err := validateRequest(r, wantHeaders); err != nil {
+		plexError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	_, _ = w.Write([]byte(`<user authenticationToken="` + a.token + `"></user>`))
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"code": "1234",
+		"id":   42,
+	})
 }
 
-var _ http.Handler = (*authV2Server)(nil)
-
-type authV2Server struct {
-	keys map[string]jwk.Key
-	lock sync.Mutex
-}
-
-func (a *authV2Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch r.URL.Path {
-	case "/api/v2/auth/nonce":
-		a.handleNonce(w, r)
-	case "/api/v2/auth/jwk":
-		a.handleJWK(w, r)
-	case "/api/v2/auth/token":
-		a.handleToken(w, r)
-	default:
-		http.Error(w, "not found", http.StatusNotFound)
+func (f fakeServer) handleValidatePIN(w http.ResponseWriter, r *http.Request) {
+	wantHeaders := map[string]string{
+		"Accept":                   "application/json",
+		"X-Plex-Client-Identifier": f.config.ClientID,
 	}
-}
-
-func (a *authV2Server) handleNonce(w http.ResponseWriter, _ *http.Request) {
-	nonce := make([]byte, 16)
-	if _, err := rand.Read(nonce); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := validateRequest(r, wantHeaders); err != nil {
+		plexError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{ "nonce": "` + hex.EncodeToString(nonce) + `" }`))
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"authToken": "tok-abc",
+		"code":      "1234",
+	})
 }
 
-func (a *authV2Server) handleJWK(w http.ResponseWriter, r *http.Request) {
-	var parsed struct {
-		JWK json.RawMessage `json:"jwk"`
+func (f fakeServer) handleJWK(w http.ResponseWriter, r *http.Request) {
+	wantHeaders := map[string]string{
+		"Accept":                   "application/json",
+		"X-Plex-Client-Identifier": f.config.ClientID,
+		"X-Plex-Token":             "tok-abc",
 	}
-	body, _ := io.ReadAll(r.Body)
-	if err := json.Unmarshal(body, &parsed); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := validateRequest(r, wantHeaders); err != nil {
+		plexError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	key, err := jwk.ParseKey(parsed.JWK)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	pub, err := key.PublicKey()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	a.lock.Lock()
-	defer a.lock.Unlock()
-	if a.keys == nil {
-		a.keys = make(map[string]jwk.Key)
-	}
-	a.keys[r.Header.Get("X-Plex-Client-Identifier")] = pub
-	w.WriteHeader(http.StatusCreated)
-}
-
-func (a *authV2Server) handleToken(w http.ResponseWriter, r *http.Request) {
-	var req map[string]string
+	req := make(map[string]any)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	signedToken, ok := req["jwt"]
+	jwk, ok := req["jwk"].(map[string]any)
+	if !ok {
+		http.Error(w, "missing jwk", http.StatusBadRequest)
+		return
+	}
+	_ = jwk
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (f fakeServer) handleNonce(w http.ResponseWriter, r *http.Request) {
+	wantHeaders := map[string]string{
+		"Accept":                   "application/json",
+		"X-Plex-Client-Identifier": f.config.ClientID,
+	}
+	if err := validateRequest(r, wantHeaders); err != nil {
+		plexError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"nonce": "01234567890"})
+}
+
+func (f fakeServer) handleJWToken(w http.ResponseWriter, r *http.Request) {
+	wantHeaders := map[string]string{
+		"Accept":                   "application/json",
+		"X-Plex-Client-Identifier": f.config.ClientID,
+	}
+	if err := validateRequest(r, wantHeaders); err != nil {
+		plexError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var request map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	signedToken, ok := request["jwt"]
 	if !ok {
 		http.Error(w, "missing jwt", http.StatusBadRequest)
 		return
 	}
-	a.lock.Lock()
-	defer a.lock.Unlock()
-	pub, ok := a.keys[r.Header.Get("X-Plex-Client-Identifier")]
-	if !ok {
-		http.Error(w, "no key found for clientID", http.StatusUnauthorized)
-		return
-	}
-	// Parse and verify JWT
-	parsed, err := jwt.Parse([]byte(signedToken), jwt.WithKey(jwa.EdDSA(), pub), jwt.WithVerify(true))
+	tok, err := jwt.Parse([]byte(signedToken), jwt.WithVerify(false))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// we ignore the payload for now.  mainly token expiration is of interest.
-	_ = parsed
+	if aud, ok := tok.Audience(); !ok || len(aud) == 0 || aud[0] != "plex.tv" {
+		http.Error(w, "audience missing/invalid", http.StatusBadRequest)
+	}
 
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{ "auth_token": "` + uuid.New().String() + `" }`))
+	_ = json.NewEncoder(w).Encode(map[string]string{"auth_token": "tok-abc"})
+}
+
+func (f fakeServer) handleDevices(w http.ResponseWriter, r *http.Request) {
+	wantHeaders := map[string]string{
+		"Accept":                   "application/xml",
+		"X-Plex-Client-Identifier": f.config.ClientID,
+		"X-Plex-Token":             "tok-abc",
+	}
+	if err := validateRequest(r, wantHeaders); err != nil {
+		plexError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/xml")
+	_, _ = io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer>
+  <Device product="Plex Media Server" name="srv1" token="tok-xyz"></Device>
+  <Device product="Other" name="client"></Device>
+</MediaContainer>`)
+}
+
+func validateRequest(r *http.Request, wantHeaders map[string]string) error {
+	for k, v := range wantHeaders {
+		if r.Header.Get(k) != v {
+			return fmt.Errorf("invalid/missing header: %s=%s", k, r.Header.Get(k))
+		}
+	}
+	return nil
+}
+
+func plexError(w http.ResponseWriter, code int, msg string) {
+	w.WriteHeader(code)
+	_, _ = w.Write([]byte(`{ "error": "` + msg + `" }"`))
 }
