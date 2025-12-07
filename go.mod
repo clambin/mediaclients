@@ -1,6 +1,6 @@
 module github.com/clambin/mediaclients
 
-go 1.25.0
+go 1.24.0
 
 require (
 	codeberg.org/clambin/go-common/set v0.6.0
