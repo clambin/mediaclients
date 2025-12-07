@@ -17,8 +17,8 @@ var _ error = (*PlexError)(nil)
 type PlexError struct {
 	Reason     string
 	Status     string
-	StatusCode int
 	Body       []byte
+	StatusCode int
 }
 
 func (h *PlexError) Error() string {

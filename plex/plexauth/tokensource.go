@@ -109,7 +109,7 @@ type pmsTokenSource struct {
 
 func (p pmsTokenSource) Token(ctx context.Context) (AuthToken, error) {
 	// get a token to access the Plex Cloud API
-	token, err := p.tokenSource.token(ctx)
+	token, err := p.token(ctx)
 	if err != nil {
 		return "", fmt.Errorf("token: %w", err)
 	}
