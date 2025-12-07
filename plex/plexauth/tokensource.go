@@ -66,7 +66,7 @@ func (f TokenSourceFactory) PMSTokenWithJWT(r Registrar, pmsName string, storePa
 		AuthTokenSource: &pmsTokenSource{
 			tokenSource: &jwtTokenSource{
 				Config:    f.config,
-				Vault:     newJWTDataStore(storePath, passphrase),
+				Vault:     newJWTDataStore(storePath, passphrase, f.config.ClientID),
 				Registrar: r,
 				Logger:    logger,
 			},
@@ -161,15 +161,6 @@ type secureDataVault interface {
 	Save(jwtSecureData) error
 }
 
-func (s *jwtTokenSource) token(ctx context.Context) (token Token, err error) {
-	// load the client's jwt token data. We only need to do this once.
-	if s.init.Do(func() { err = s.initialize(ctx) }); err != nil {
-		return token, fmt.Errorf("failed to initialize: %w", err)
-	}
-	// create a jwt.
-	return s.Config.JWTToken(ctx, s.secureData.PrivateKey, s.secureData.KeyID)
-}
-
 func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 	// set up logger if not done already
 	if s.Logger == nil {
@@ -178,37 +169,54 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 
 	// load the client's jwt token data
 	s.secureData, err = s.Vault.Load()
-	if err == nil {
-		// TODO: need to check if secureData.ClientID matches Config.ClientID
+	switch {
+	case err == nil:
+		// valid secure data found
 		return nil
-	}
-	if !errors.Is(err, vault.ErrNotFound) {
-		return fmt.Errorf("failed to load token data: %w", err)
+	case errors.Is(err, ErrInvalidClientID):
+		// secure data found, but not for this client ID
+		s.Logger.Warn("client ID mismatch, secure data found but not for this client. Overwriting secure data",
+			slog.String("want", s.Config.ClientID),
+			slog.String("found", s.secureData.ClientID),
+		)
+	case errors.Is(err, vault.ErrNotFound):
+		s.Logger.Info("no secure data found. Initializing")
+	default:
+		return fmt.Errorf("load token data: %w", err)
 	}
 
-	s.Logger.Debug("token data not found, creating new one")
+	s.Logger.Debug("registering device")
 
 	var authToken AuthToken
 	authToken, err = s.Registrar.Register(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to register device: %w", err)
+		return fmt.Errorf("register: %w", err)
 	}
 
 	s.Logger.Debug("device registered successfully")
 
 	s.secureData.ClientID = s.Config.ClientID
 	if s.secureData.PrivateKey, s.secureData.KeyID, err = s.Config.GenerateAndUploadPublicKey(ctx, authToken); err != nil {
-		return fmt.Errorf("failed to publish key: %w", err)
+		return fmt.Errorf("publish key: %w", err)
 	}
 
 	s.Logger.Debug("public key published successfully")
 
 	if err = s.Vault.Save(s.secureData); err != nil {
-		return fmt.Errorf("failed to save token data: %w", err)
+		return fmt.Errorf("save token data: %w", err)
 	}
 
 	s.Logger.Debug("token data saved successfully")
 	return nil
+}
+
+func (s *jwtTokenSource) token(ctx context.Context) (token Token, err error) {
+	// load the client's jwt token data. We only need to do this once.
+	if s.init.Do(func() { err = s.initialize(ctx) }); err != nil {
+		return token, fmt.Errorf("init: %w", err)
+	}
+	// create a jwt.
+	return s.Config.JWTToken(ctx, s.secureData.PrivateKey, s.secureData.KeyID)
 }
 
 // registrarAsTokenSource is an adapter that allows the use of any Registrar as an tokenSource..

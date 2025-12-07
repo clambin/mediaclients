@@ -3,6 +3,7 @@ package plexauth
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -128,6 +129,52 @@ func TestPMSTokenSourceWithJWT(t *testing.T) {
 	r.err = errors.New("test error")
 	if _, err = ts.Token(t.Context()); err == nil {
 		t.Fatalf("expected error, got nil")
+	}
+}
+
+func Test_jwtTokenSource(t *testing.T) {
+	// auth server
+	cfg, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
+	t.Cleanup(s.Close)
+
+	logger := slog.New(slog.DiscardHandler) //slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	v := fakeVault{}
+	ts := jwtTokenSource{
+		Registrar: fakeRegistrar{authToken: "tok-abc"},
+		Vault:     &v,
+		Logger:    logger,
+		Config:    &cfg,
+	}
+	ctx := t.Context()
+
+	// happy path: no secure data, the device is registered.
+	token, err := ts.token(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if token.String() != "tok-abc" {
+		t.Fatalf("unexpected token: %s", token)
+	}
+
+	// secure data exists, but it contains an invalid Client ID.
+	v.err = ErrInvalidClientID
+	ts = jwtTokenSource{
+		Registrar: fakeRegistrar{authToken: "tok-abc"},
+		Vault:     &v,
+		Logger:    logger,
+		Config:    &cfg,
+	}
+
+	// secure data is invalid, the device is re-registered, and a new token is returned.
+	token, err = ts.token(ctx)
+	if err != nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if token.String() != "tok-abc" {
+		t.Fatalf("unexpected token: %s", token)
+	}
+	if secureData := v.data.Load(); secureData.ClientID != "my-client-id" {
+		t.Fatalf("unexpected client ID: %s", secureData.ClientID)
 	}
 }
 
