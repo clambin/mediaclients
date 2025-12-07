@@ -6,7 +6,6 @@ import (
 )
 
 // TODO: do we need ErrInvalidToken? Do we need more?
-// TODO: should we add more info to PlexError? HTTP Code, etc?
 
 var (
 	ErrInvalidToken = fmt.Errorf("invalid token")

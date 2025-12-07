@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"os"
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/clambin/mediaclients/plex/internal/vault"
 )
 
 func TestFixedTokenSource(t *testing.T) {
@@ -203,7 +202,7 @@ func (f *fakeVault) Load() (jwtSecureData, error) {
 	if data := f.data.Load(); data != nil {
 		return *data, nil
 	}
-	return jwtSecureData{}, vault.ErrNotFound
+	return jwtSecureData{}, os.ErrNotExist
 }
 
 func (f *fakeVault) Save(data jwtSecureData) error {

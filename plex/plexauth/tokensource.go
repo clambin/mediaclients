@@ -5,10 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
-
-	"github.com/clambin/mediaclients/plex/internal/vault"
 )
 
 // A AuthTokenSource returns a Plex authentication Token
@@ -179,7 +178,7 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 			slog.String("want", s.Config.ClientID),
 			slog.String("found", s.secureData.ClientID),
 		)
-	case errors.Is(err, vault.ErrNotFound):
+	case errors.Is(err, os.ErrNotExist):
 		s.Logger.Info("no secure data found. Initializing")
 	default:
 		return fmt.Errorf("load token data: %w", err)

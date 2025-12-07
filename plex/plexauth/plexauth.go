@@ -327,10 +327,10 @@ func (c Config) nonce(ctx context.Context) (string, error) {
 	return response.Nonce, nil
 }
 
-func (c Config) jwtToken(ctx context.Context, signedToken string) (JWTToken, error) {
+func (c Config) jwtToken(ctx context.Context, signedJWToken string) (JWTToken, error) {
 	// send the signed token to the auth endpoint
 	var body bytes.Buffer
-	_ = json.NewEncoder(&body).Encode(map[string]string{"jwt": signedToken})
+	_ = json.NewEncoder(&body).Encode(map[string]string{"jwt": signedJWToken})
 	resp, err := c.do(ctx, http.MethodPost, c.AuthV2URL+"/api/v2/auth/token", &body, http.StatusOK)
 	if err != nil {
 		return JWTToken{}, err
@@ -378,6 +378,9 @@ func (c Config) do(ctx context.Context, method string, url string, body io.Reade
 
 // RegisteredDevices returns all devices registered under the provided token
 func (c Config) RegisteredDevices(ctx context.Context, token Token) ([]RegisteredDevice, error) {
+	if !token.IsValid() {
+		return nil, ErrInvalidToken
+	}
 	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/devices.xml", nil, http.StatusOK, func(req *http.Request) {
 		req.Header.Set("Accept", "application/xml")
 		req.Header.Set("X-Plex-Token", token.String())
@@ -400,6 +403,9 @@ func (c Config) RegisteredDevices(ctx context.Context, token Token) ([]Registere
 
 // MediaServers returns all Plex Media Servers registered under the provided token
 func (c Config) MediaServers(ctx context.Context, token Token) ([]RegisteredDevice, error) {
+	if !token.IsValid() {
+		return nil, ErrInvalidToken
+	}
 	// get all devices
 	devices, err := c.RegisteredDevices(ctx, token)
 	if err == nil {

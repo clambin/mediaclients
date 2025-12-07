@@ -1,12 +1,29 @@
 package vault
 
 import (
+	"errors"
+	"io"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/spf13/afero"
 )
+
+func TestErrInvalidKey(t *testing.T) {
+	err := &ErrInvalidKey{Err: errors.New("test fail")}
+	if got := err.Error(); got != "invalid key: test fail" {
+		t.Fatalf("unexpected error string: want %v, got %v", "invalid key: test fail", got)
+	}
+	err = &ErrInvalidKey{}
+	if got := err.Error(); got != "invalid key" {
+		t.Fatalf("unexpected error string: want %v, got %v", "invalid key", got)
+	}
+	err = &ErrInvalidKey{Err: io.ErrUnexpectedEOF}
+	if !errors.Is(err, io.ErrUnexpectedEOF) {
+		t.Fatalf("unexpected error: want %v, got %v", io.ErrUnexpectedEOF, err)
+	}
+}
 
 func TestVault(t *testing.T) {
 	doTest[int](t, 123)

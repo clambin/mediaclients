@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 
 	"github.com/spf13/afero"
@@ -22,8 +23,6 @@ const (
 )
 
 var (
-	ErrNotFound = errors.New("not found")
-
 	// hash function to use for deriving the encryption key
 	hash = sha256.New
 	// size of the salt to use for deriving the encryption key
@@ -80,7 +79,7 @@ func (c *Vault[T]) Load() (T, error) {
 	data, err := afero.ReadFile(c.fs, c.filePath)
 	if err != nil {
 		if errors.Is(err, afero.ErrFileNotFound) {
-			return zero, ErrNotFound
+			return zero, os.ErrNotExist
 		}
 		return zero, err
 	}
@@ -180,9 +179,9 @@ type content struct {
 
 // deriveKey generates the encryption key from a passphrase and a salt value
 func deriveEncryptionKey(passphrase string, salt []byte) ([]byte, error) {
-	hkdf := hkdf.New(hash, []byte(passphrase), salt, nil)
+	r := hkdf.New(hash, []byte(passphrase), salt, nil)
 	key := make([]byte, 32)
-	_, err := io.ReadFull(hkdf, key)
+	_, err := io.ReadFull(r, key)
 	return key, err
 }
 
