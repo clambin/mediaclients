@@ -16,10 +16,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
 var (
@@ -289,21 +290,28 @@ func (c Config) JWTToken(ctx context.Context, privateKey ed25519.PrivateKey, key
 		return JWTToken{}, fmt.Errorf("get nonce: %w", err)
 	}
 	// create a jwt
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.MapClaims{
-		"nonce": nonce,
-		"scope": strings.Join(c.Scopes, ","),
-		"aud":   c.aud,
-		"iss":   c.ClientID,
-	})
-	// the key ID has to be in the header, not the claims.
-	jwtToken.Header["kid"] = keyID
-	// sign the jwt
-	signedJWToken, err := jwtToken.SignedString(privateKey)
+	tok := jwt.New()
+	_ = tok.Set("nonce", nonce)
+	_ = tok.Set("scope", strings.Join(c.Scopes, ","))
+	_ = tok.Set("aud", c.aud)
+	_ = tok.Set("iss", c.ClientID)
+	hdrs := jws.NewHeaders()
+	if err = hdrs.Set(jws.KeyIDKey, keyID); err != nil {
+		return JWTToken{}, fmt.Errorf("set kid: %w", err)
+	}
+	signed, err := jwt.Sign(tok,
+		jwt.WithKey(
+			jwa.EdDSA(),
+			privateKey,
+			jws.WithProtectedHeaders(hdrs),
+		),
+	)
 	if err != nil {
 		return JWTToken{}, fmt.Errorf("sign: %w", err)
 	}
+
 	// request a new jwtToken
-	return c.jwtToken(ctx, signedJWToken)
+	return c.jwtToken(ctx, string(signed))
 }
 
 func (c Config) nonce(ctx context.Context) (string, error) {

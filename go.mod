@@ -5,7 +5,6 @@ go 1.24.0
 require (
 	codeberg.org/clambin/go-common/set v0.6.0
 	codeberg.org/clambin/go-common/testutils v0.7.2
-	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/lestrrat-go/jwx/v3 v3.0.12
 	github.com/oapi-codegen/runtime v1.1.2

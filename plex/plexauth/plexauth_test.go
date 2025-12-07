@@ -281,7 +281,11 @@ func (f fakeServer) handleJWK(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing jwk", http.StatusBadRequest)
 		return
 	}
-	_ = jwk
+	for _, attrib := range []string{"alg", "crv", "kid", "kty", "use"} {
+		if value, ok := jwk[attrib].(string); !ok || value == "" {
+			http.Error(w, "missing jwt attribute: "+attrib, http.StatusBadRequest)
+		}
+	}
 	w.WriteHeader(http.StatusCreated)
 }
 
