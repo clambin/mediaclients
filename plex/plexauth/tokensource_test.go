@@ -3,12 +3,15 @@ package plexauth
 import (
 	"context"
 	"errors"
-	"path/filepath"
+	"sync/atomic"
 	"testing"
+	"time"
+
+	"github.com/clambin/mediaclients/plex/internal/vault"
 )
 
 func TestFixedTokenSource(t *testing.T) {
-	ts := NewFixedTokenSource("abc")
+	ts := DefaultConfig.TokenSource().FixedToken("abc")
 	token, err := ts.Token(t.Context())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -24,7 +27,7 @@ func TestLegacyTokenSourceWithCredentials(t *testing.T) {
 	t.Cleanup(s.Close)
 
 	// happy path
-	ts := NewLegacyTokenSource(CredentialsRegistrar{
+	ts := cfg.TokenSource().LegacyToken(CredentialsRegistrar{
 		Config:   &cfg,
 		Username: "user",
 		Password: "pass",
@@ -53,9 +56,10 @@ func TestLegacyTokenSourceWithPIN(t *testing.T) {
 	t.Cleanup(s.Close)
 
 	// happy path
-	ts := NewLegacyTokenSource(PINRegistrar{
-		Config:   &cfg,
-		Callback: func(_ PINResponse, _ string) {},
+	ts := cfg.TokenSource().LegacyToken(PINRegistrar{
+		Config:       &cfg,
+		Callback:     func(_ PINResponse, _ string) {},
+		PollInterval: 100 * time.Millisecond,
 	})
 	token, err := ts.Token(t.Context())
 	if err != nil {
@@ -82,7 +86,7 @@ func TestPMSTokenStore(t *testing.T) {
 
 	// happy path
 	r := fakeRegistrar{authToken: AuthToken("tok-abc"), err: nil}
-	ts := NewPMSTokenStore(cfg, &r, "srv1")
+	ts := cfg.TokenSource().PMSToken(&r, "srv1")
 	token, err := ts.Token(t.Context())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -99,9 +103,9 @@ func TestPMSTokenSourceWithJWT(t *testing.T) {
 
 	// happy path
 	r := fakeRegistrar{authToken: AuthToken("tok-abc"), err: nil}
-	tempDir := t.TempDir()
-	storePath := filepath.Join(tempDir, "token-data.enc")
-	ts := NewPMSTokenSourceWithJWT(cfg, &r, "srv1", storePath, "my-secret-passphrase", nil)
+	var f fakeVault
+	ts := cfg.TokenSource().PMSTokenWithJWT(&r, "srv1", "ignored.enc", "my-secret-passphrase", nil)
+	ts.(*cachingTokenSource).AuthTokenSource.(*pmsTokenSource).tokenSource.(*jwtTokenSource).Vault = &f
 	token, err := ts.Token(t.Context())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -111,14 +115,16 @@ func TestPMSTokenSourceWithJWT(t *testing.T) {
 	}
 
 	// a failed load of secure data will fail the token source
-	ts = NewPMSTokenSourceWithJWT(cfg, &r, "srv1", storePath, "invalid-secret-passphrase", nil)
+	ts = cfg.TokenSource().PMSTokenWithJWT(&r, "srv1", "ignored.enc", "invalid-secret-passphrase", nil)
+	ts.(*cachingTokenSource).AuthTokenSource.(*pmsTokenSource).tokenSource.(*jwtTokenSource).Vault = &f
+	f.err = errors.New("test error")
 	if _, err = ts.Token(t.Context()); err == nil {
 		t.Fatalf("expected error, got nil")
 	}
 
 	// a failed registrar will fail the token source
-	storePath = filepath.Join(tempDir, "token-data-2.enc")
-	ts = NewPMSTokenSourceWithJWT(cfg, &r, "srv1", storePath, "my-secret-passphrase", nil)
+	ts = cfg.TokenSource().PMSTokenWithJWT(&r, "srv1", "ignored.enc", "my-secret-passphrase", nil)
+	ts.(*cachingTokenSource).AuthTokenSource.(*pmsTokenSource).tokenSource.(*jwtTokenSource).Vault = &f
 	r.err = errors.New("test error")
 	if _, err = ts.Token(t.Context()); err == nil {
 		t.Fatalf("expected error, got nil")
@@ -134,4 +140,26 @@ type fakeRegistrar struct {
 
 func (f fakeRegistrar) Register(_ context.Context) (AuthToken, error) {
 	return f.authToken, f.err
+}
+
+var _ secureDataVault = (*fakeVault)(nil)
+
+type fakeVault struct {
+	data atomic.Pointer[jwtSecureData]
+	err  error
+}
+
+func (f *fakeVault) Load() (jwtSecureData, error) {
+	if f.err != nil {
+		return jwtSecureData{}, f.err
+	}
+	if data := f.data.Load(); data != nil {
+		return *data, nil
+	}
+	return jwtSecureData{}, vault.ErrNotFound
+}
+
+func (f *fakeVault) Save(data jwtSecureData) error {
+	f.data.Store(&data)
+	return nil
 }

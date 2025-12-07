@@ -2,6 +2,7 @@ package plexauth
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -122,9 +123,6 @@ func (c Config) WithClientDevice(device ClientDevice) Config {
 }
 
 // RegisterWithCredentials registers a device using username/password credentials and returns a Token.
-//
-// Note: once a JWTToken has been requested for the ClientID, further calls to RegisterWithCredentials
-// for the same ClientID will fail.
 func (c Config) RegisterWithCredentials(ctx context.Context, username, password string) (AuthToken, error) {
 	// credentials are passed in the request body in url-encoded form
 	v := make(url.Values)
@@ -152,26 +150,24 @@ func (c Config) RegisterWithCredentials(ctx context.Context, username, password 
 }
 
 // RegisterWithPIN is a helper function that registers a device using the PIN authentication flow and gets a Token.
+// It requests a PIN from Plex, calls the callback with the PINResponse and PIN URL and blocks until the PIN is confirmed.
+// Use a context with a timeout to ensure it doesn't block forever.
 //
 // The callback can be used to inform the user/application of the URL to confirm the PINRequest.
-//
-// Note: once a JWTToken has been requested for the ClientID, further calls to RegisterWithPIN
-// for the same ClientID will fail.
-func (c Config) RegisterWithPIN(ctx context.Context, callback func(PINResponse, string), pollInterval time.Duration) (AuthToken, error) {
+func (c Config) RegisterWithPIN(ctx context.Context, callback func(PINResponse, string), pollInterval time.Duration) (token AuthToken, err error) {
 	pinResponse, pinURL, err := c.PINRequest(ctx)
 	if err != nil {
 		return "", fmt.Errorf("pin: %w", err)
 	}
 	callback(pinResponse, pinURL)
 	for {
+		if token, _, err = c.ValidatePIN(ctx, pinResponse.Id); err == nil && token.IsValid() {
+			return token, nil
+		}
 		select {
 		case <-ctx.Done():
 			return "", ctx.Err()
-		case <-time.After(pollInterval):
-			token, _, err := c.ValidatePIN(ctx, pinResponse.Id)
-			if err == nil && token != "" {
-				return token, nil
-			}
+		case <-time.After(cmp.Or(pollInterval, 15*time.Second)):
 		}
 	}
 }
@@ -185,11 +181,11 @@ func (c Config) PINRequest(ctx context.Context) (PINResponse, string, error) {
 	if err != nil {
 		return PINResponse{}, "", fmt.Errorf("pin request: %w", err)
 	}
+	defer func() { _ = resp.Body.Close() }()
 	var response PINResponse
 	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return PINResponse{}, "", fmt.Errorf("decode: %w", err)
 	}
-
 	// TODO: url works, but doesn't match the docs
 	return response, "https://plex.tv/pin?pin=" + response.Code, nil
 }
@@ -283,7 +279,8 @@ func (c Config) UploadPublicKey(ctx context.Context, publicKey ed25519.PublicKey
 // JWTTokens are valid for 7 days.
 //
 // Note: once a JWTToken has been requested for the ClientID, further requests to re-register that ClientID
-// ([Config.RegisterWithCredentials]/[Config.RegisterWithPIN]) will fail.
+// ([Config.RegisterWithCredentials]/[Config.RegisterWithPIN]) will fail. You will need to create a new ClientID
+// and re-register
 func (c Config) JWTToken(ctx context.Context, privateKey ed25519.PrivateKey, keyID string) (JWTToken, error) {
 	nonce, err := c.nonce(ctx)
 	if err != nil {
@@ -379,8 +376,6 @@ func (c Config) do(ctx context.Context, method string, url string, body io.Reade
 	return resp, nil
 }
 
-// The following functions aren't technically authentication-related.
-
 // RegisteredDevices returns all devices registered under the provided token
 func (c Config) RegisteredDevices(ctx context.Context, token Token) ([]RegisteredDevice, error) {
 	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/devices.xml", nil, http.StatusOK, func(req *http.Request) {
@@ -414,4 +409,8 @@ func (c Config) MediaServers(ctx context.Context, token Token) ([]RegisteredDevi
 		})
 	}
 	return devices, err
+}
+
+func (c Config) TokenSource() TokenSourceFactory {
+	return TokenSourceFactory{config: &c}
 }
