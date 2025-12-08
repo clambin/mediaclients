@@ -2,26 +2,31 @@ package vault
 
 import (
 	"errors"
-	"io"
+	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/spf13/afero"
 )
 
-func TestErrInvalidKey(t *testing.T) {
-	err := &ErrInvalidKey{Err: errors.New("test fail")}
-	if got := err.Error(); got != "invalid key: test fail" {
-		t.Fatalf("unexpected error string: want %v, got %v", "invalid key: test fail", got)
-	}
-	err = &ErrInvalidKey{}
+func TestErrDecryptionFailed(t *testing.T) {
+	err := &ErrDecryptionFailed{}
 	if got := err.Error(); got != "invalid key" {
 		t.Fatalf("unexpected error string: want %v, got %v", "invalid key", got)
 	}
-	err = &ErrInvalidKey{Err: io.ErrUnexpectedEOF}
-	if !errors.Is(err, io.ErrUnexpectedEOF) {
-		t.Fatalf("unexpected error: want %v, got %v", io.ErrUnexpectedEOF, err)
+	err = &ErrDecryptionFailed{Err: os.ErrNotExist}
+	if got := err.Error(); got != "invalid key: file does not exist" {
+		t.Fatalf("unexpected error string: want %v, got %v", "invalid key: file does not exist", got)
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("unexpected error: want %v, got %v", os.ErrNotExist, err)
+	}
+
+	err2 := fmt.Errorf("test fail: %w", &ErrDecryptionFailed{Err: errors.New("test fail")})
+	var err3 *ErrDecryptionFailed
+	if !errors.As(err2, &err3) {
+		t.Fatalf("errors.As failed")
 	}
 }
 
@@ -39,16 +44,16 @@ func TestVault(t *testing.T) {
 }
 
 func doTest[T any](t *testing.T, v T) {
-	t.Helper()
+	//t.Helper()
 
-	f := afero.NewMemMapFs()
-	c := newWithFS[T](f, "vault.enc", "my-passphrase")
+	filename := filepath.Join(t.TempDir(), "vault.enc")
+	c := New[T](filename, "my-passphrase")
 
 	if err := c.Save(v); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	_, err := afero.ReadFile(f, "vault.enc")
+	_, err := os.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

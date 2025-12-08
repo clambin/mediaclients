@@ -14,7 +14,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/spf13/afero"
 	"golang.org/x/crypto/hkdf"
 )
 
@@ -29,40 +28,33 @@ var (
 	saltSize = hash().Size()
 )
 
-type ErrInvalidKey struct {
+type ErrDecryptionFailed struct {
 	Err error
 }
 
-func (e *ErrInvalidKey) Error() string {
+func (e *ErrDecryptionFailed) Error() string {
 	if e.Err != nil {
 		return "invalid key: " + e.Err.Error()
 	}
 	return "invalid key"
 }
 
-func (e *ErrInvalidKey) Unwrap() error {
+func (e *ErrDecryptionFailed) Unwrap() error {
 	return e.Err
 }
 
 type Vault[T any] struct {
 	content    *T
-	fs         afero.Fs
 	passphrase string
 	filePath   string
 	lock       sync.Mutex
 }
 
 func New[T any](filePath string, passphrase string) *Vault[T] {
-	return newWithFS[T](afero.NewOsFs(), filePath, passphrase)
-}
-
-func newWithFS[T any](fs afero.Fs, filePath string, passphrase string) *Vault[T] {
-	c := Vault[T]{
-		fs:         fs,
+	return &Vault[T]{
 		filePath:   filePath,
 		passphrase: passphrase,
 	}
-	return &c
 }
 
 func (c *Vault[T]) Load() (T, error) {
@@ -76,11 +68,8 @@ func (c *Vault[T]) Load() (T, error) {
 	}
 
 	// read the file
-	data, err := afero.ReadFile(c.fs, c.filePath)
+	data, err := os.ReadFile(c.filePath)
 	if err != nil {
-		if errors.Is(err, afero.ErrFileNotFound) {
-			return zero, os.ErrNotExist
-		}
 		return zero, err
 	}
 
@@ -113,7 +102,7 @@ func (c *Vault[T]) Load() (T, error) {
 	// decrypt the data
 	clearData, err := decryptAES(record.Data, encryptionKey[:])
 	if err != nil {
-		return zero, &ErrInvalidKey{Err: err}
+		return zero, &ErrDecryptionFailed{Err: err}
 	}
 
 	// decode the data
@@ -152,7 +141,7 @@ func (c *Vault[T]) Save(t T) error {
 		return fmt.Errorf("derive encryption key: %w", err)
 	}
 	if record.Data, err = encryptAES(body, encryptionKey[:]); err != nil {
-		return &ErrInvalidKey{Err: err}
+		return &ErrDecryptionFailed{Err: err}
 	}
 
 	// encode the record
@@ -161,7 +150,7 @@ func (c *Vault[T]) Save(t T) error {
 	}
 
 	// write the file
-	if err = afero.WriteFile(c.fs, c.filePath, body, 0600); err != nil {
+	if err = os.WriteFile(c.filePath, body, 0600); err != nil {
 		return fmt.Errorf("write file: %w", err)
 	}
 

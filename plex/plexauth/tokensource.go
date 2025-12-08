@@ -30,7 +30,7 @@ type TokenSourceFactory struct {
 
 // FixedToken returns an AuthTokenSource that always returns the given token.
 func (f TokenSourceFactory) FixedToken(token AuthToken) AuthTokenSource {
-	return &cachingTokenSource{AuthTokenSource: fixedTokenSource{token: token}}
+	return &fixedTokenSource{token: token}
 }
 
 // LegacyToken returns an AuthTokenSource that uses the given Registrar to register a new device and get an auth token.
@@ -75,6 +75,15 @@ func (f TokenSourceFactory) PMSTokenWithJWT(r Registrar, pmsName string, storePa
 	}
 }
 
+// fixedTokenSource returns a fixed token.
+type fixedTokenSource struct {
+	token AuthToken
+}
+
+func (f fixedTokenSource) Token(_ context.Context) (AuthToken, error) {
+	return f.token, nil
+}
+
 // A cachingTokenSource caches the auth token obtained by the underlying AuthTokenSource.
 type cachingTokenSource struct {
 	AuthTokenSource
@@ -90,15 +99,6 @@ func (s *cachingTokenSource) Token(ctx context.Context) (AuthToken, error) {
 		s.authToken, err = s.AuthTokenSource.Token(ctx)
 	}
 	return s.authToken, err
-}
-
-// fixedTokenSource returns a fixed token.
-type fixedTokenSource struct {
-	token AuthToken
-}
-
-func (f fixedTokenSource) Token(_ context.Context) (AuthToken, error) {
-	return f.token, nil
 }
 
 // A legacyTokenSource uses a Registrar to register a new device and get an auth token.

@@ -32,7 +32,7 @@ func TestJWTDataStore(t *testing.T) {
 
 	s2 := newJWTDataStore(path, "invalid-passphrase", "my-client-id")
 	_, err = s2.Load()
-	var errInvalidKey *vault.ErrInvalidKey
+	var errInvalidKey *vault.ErrDecryptionFailed
 	if !errors.As(err, &errInvalidKey) {
 		t.Fatalf("expected error, got %#+v", err)
 	}

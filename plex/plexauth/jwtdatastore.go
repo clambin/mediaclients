@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	ErrInvalidClientID = fmt.Errorf("vault contains invalid client ID")
+	ErrInvalidClientID = fmt.Errorf("data store contains invalid client ID")
 )
 
 // jwtSecureData contains the data required to request a JWTToken.
