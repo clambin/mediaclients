@@ -21,7 +21,7 @@ func TestClient_Failures(t *testing.T) {
 	ctx := t.Context()
 	_, err := c.GetIdentity(ctx)
 	require.Error(t, err)
-	assert.Equal(t, "plex: 500 Internal Server Error", err.Error())
+	assert.Equal(t, "http: 500 Internal Server Error", err.Error())
 
 	s.Close()
 	_, err = c.GetIdentity(ctx)

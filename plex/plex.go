@@ -1,11 +1,9 @@
 package plex
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/clambin/mediaclients/plex/plexauth"
@@ -63,15 +61,12 @@ func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		// TODO: do errors match the Plex Cloud API?
-		return response.MediaContainer, plexauth.ParsePlexError(resp)
+		return response.MediaContainer, fmt.Errorf("http: %s", resp.Status)
 	}
 
-	var buf bytes.Buffer
-	if err = json.NewDecoder(io.TeeReader(resp.Body, &buf)).Decode(&response); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		err = fmt.Errorf("decode: %w", err)
 	}
-	_ = buf
 
 	return response.MediaContainer, err
 }

@@ -173,9 +173,11 @@ func (c Config) RegisterWithPIN(ctx context.Context, callback func(PINResponse, 
 }
 
 // PINRequest requests a PINRequest from Plex.
+//
+// Currently only supports strong=false. Support for strong=true is planned, but this requires https://app.plex.tv/auth,
+// which is currently broken.
 func (c Config) PINRequest(ctx context.Context) (PINResponse, string, error) {
-	// TODO: support strong=true, but need to figure out the right format for the pin url
-	resp, err := c.do(ctx, http.MethodPost, c.AuthV2URL+"/api/v2/pins?strong=false", nil, http.StatusCreated, func(req *http.Request) {
+	resp, err := c.do(ctx, http.MethodPost, c.AuthV2URL+"/api/v2/pins" /*?strong=false"*/, nil, http.StatusCreated, func(req *http.Request) {
 		c.Device.populateRequest(req)
 	})
 	if err != nil {
@@ -186,14 +188,18 @@ func (c Config) PINRequest(ctx context.Context) (PINResponse, string, error) {
 	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return PINResponse{}, "", fmt.Errorf("decode: %w", err)
 	}
-	// TODO: url works, but doesn't match the docs
+	// legacy endpoint. once https://app.plex.tv/auth is fixed, this can be adapted accordingly.
 	return response, "https://plex.tv/pin?pin=" + response.Code, nil
 }
 
 // ValidatePIN checks if the user has confirmed the PINRequest.  It returns the full Plex response.
 // When the user has confirmed the PINRequest, the AuthToken field will be populated.
 func (c Config) ValidatePIN(ctx context.Context, id int) (AuthToken, ValidatePINResponse, error) {
-	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/api/v2/pins/"+strconv.Itoa(id), nil, http.StatusOK)
+	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/api/v2/pins/"+strconv.Itoa(id), nil, http.StatusOK, func(req *http.Request) {
+		// this is only needed once we start using the new flox (https::/app.plex.tv/auth),
+		// but leaving it here for now, as it doesn't do any harm.
+		c.Device.populateRequest(req)
+	})
 	if err != nil {
 		return "", ValidatePINResponse{}, fmt.Errorf("validate pin: %w", err)
 	}
@@ -292,15 +298,15 @@ func (c Config) JWTToken(ctx context.Context, privateKey ed25519.PrivateKey, key
 	_ = tok.Set("scope", strings.Join(c.Scopes, ","))
 	_ = tok.Set("aud", c.aud)
 	_ = tok.Set("iss", c.ClientID)
-	hdrs := jws.NewHeaders()
-	if err = hdrs.Set(jws.KeyIDKey, keyID); err != nil {
+	headers := jws.NewHeaders()
+	if err = headers.Set(jws.KeyIDKey, keyID); err != nil {
 		return JWTToken{}, fmt.Errorf("set kid: %w", err)
 	}
 	signed, err := jwt.Sign(tok,
 		jwt.WithKey(
 			jwa.EdDSA(),
 			privateKey,
-			jws.WithProtectedHeaders(hdrs),
+			jws.WithProtectedHeaders(headers),
 		),
 	)
 	if err != nil {
@@ -351,31 +357,6 @@ func (c Config) jwtToken(ctx context.Context, signedJWToken string) (JWTToken, e
 	return jwtToken, nil
 }
 
-type requestFormatter func(*http.Request)
-
-func (c Config) do(ctx context.Context, method string, url string, body io.Reader, wantStatusCode int, formatters ...requestFormatter) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
-	if err != nil {
-		return nil, fmt.Errorf("new request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Accept-Language", "en-US")
-	req.Header.Set("X-Plex-Client-Identifier", c.ClientID)
-	for _, formatter := range formatters {
-		formatter(req)
-	}
-	resp, err := HTTPClient(ctx).Do(req)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != wantStatusCode {
-		defer func() { _ = resp.Body.Close() }()
-		return nil, ParsePlexError(resp)
-	}
-	return resp, nil
-}
-
 // RegisteredDevices returns all devices registered under the provided token
 func (c Config) RegisteredDevices(ctx context.Context, token Token) ([]RegisteredDevice, error) {
 	if !token.IsValid() {
@@ -419,4 +400,31 @@ func (c Config) MediaServers(ctx context.Context, token Token) ([]RegisteredDevi
 
 func (c Config) TokenSource() TokenSourceFactory {
 	return TokenSourceFactory{config: &c}
+}
+
+// requestFormatter modifies a request before [Config.do] sends to its destination.
+type requestFormatter func(*http.Request)
+
+// do builds a new HTTP request and sends it to the destination URL.
+func (c Config) do(ctx context.Context, method string, url string, body io.Reader, wantStatusCode int, formatters ...requestFormatter) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	if err != nil {
+		return nil, fmt.Errorf("new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept-Language", "en-US")
+	req.Header.Set("X-Plex-Client-Identifier", c.ClientID)
+	for _, formatter := range formatters {
+		formatter(req)
+	}
+	resp, err := httpClient(ctx).Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != wantStatusCode {
+		defer func() { _ = resp.Body.Close() }()
+		return nil, ParsePlexError(resp)
+	}
+	return resp, nil
 }

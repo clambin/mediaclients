@@ -218,7 +218,7 @@ func (s *jwtTokenSource) token(ctx context.Context) (token Token, err error) {
 	return s.Config.JWTToken(ctx, s.secureData.PrivateKey, s.secureData.KeyID)
 }
 
-// registrarAsTokenSource is an adapter that allows the use of any Registrar as an tokenSource..
+// registrarAsTokenSource is an adapter that allows the use of any Registrar as a tokenSource.
 type registrarAsTokenSource struct {
 	Registrar
 }
