@@ -55,7 +55,7 @@ func TestRegisterWithCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RegisterWithCredentials error: %v", err)
 	}
-	if tok.String() != "tok123" {
+	if tok.String() != "tok-abc" {
 		t.Fatalf("unexpected token: %s", tok)
 	}
 }
@@ -156,14 +156,14 @@ func TestRegisteredDevicesAndMediaServers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RegisteredDevices error: %v", err)
 	}
-	if len(devs) != 2 {
+	if len(devs) != 3 {
 		t.Fatalf("expected 2 devices, got %d", len(devs))
 	}
 	servers, err := cfg.MediaServers(context.Background(), AuthToken("tok-abc"))
 	if err != nil {
 		t.Fatalf("MediaServers error: %v", err)
 	}
-	if len(servers) != 1 || servers[0].Name != "srv1" {
+	if len(servers) != 2 || servers[0].Name != "srv1" || servers[1].Name != "srv2" {
 		t.Fatalf("unexpected servers: %+v", servers)
 	}
 }
@@ -218,7 +218,7 @@ func (f fakeServer) handleRegisterWithCredentials(w http.ResponseWriter, r *http
 	_ = xml.NewEncoder(w).Encode(struct {
 		XMLName             xml.Name `xml:"user"`
 		AuthenticationToken string   `xml:"authenticationToken,attr"`
-	}{AuthenticationToken: "tok123"})
+	}{AuthenticationToken: "tok-abc"})
 }
 
 func (f fakeServer) handlePIN(w http.ResponseWriter, r *http.Request) {
@@ -348,7 +348,8 @@ func (f fakeServer) handleDevices(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	_, _ = io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
 <MediaContainer>
-  <Device product="Plex Media Server" name="srv1" token="tok-xyz"></Device>
+  <Device product="Plex Media Server" name="srv1" token="tok-abc"></Device>
+  <Device product="Plex Media Server" name="srv2" token="tok-def"></Device>
   <Device product="Other" name="client"></Device>
 </MediaContainer>`)
 }

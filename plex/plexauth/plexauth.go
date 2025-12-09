@@ -10,6 +10,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -136,7 +137,7 @@ func (c Config) RegisterWithCredentials(ctx context.Context, username, password 
 		c.Device.populateRequest(req)
 	})
 	if err != nil {
-		return "", fmt.Errorf("register: %w", err)
+		return "", fmt.Errorf("registrar: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -269,24 +270,23 @@ func (c Config) UploadPublicKey(ctx context.Context, publicKey ed25519.PublicKey
 
 // JWTToken is a new authentication mechanism introduced in Plex Cloud, based on JSON Web Tokens (JWT).
 //
-// To create a JWTToken, you must first generate a new ed25519 keypair and upload the public key to Plex
+// JWTTokens increase security by eliminating the need for a PIN or username/password combination each time
+// a client starts.  As setting up JWT requires a valid auth token, a client only needs to register once.
+//
+// To create a JWTToken, a client generates a new ed25519 keypair and uploads the public key to Plex
 // (using [Config.GenerateAndUploadPublicKey] or [Config.UploadPublicKey], using a valid Plex token).
-// You can then use the private key and the public key's ID to generate a new JWTToken.
+// The client can then use the private key and the public key's ID to generate a new JWTToken.
+//
+// This does require persistence, as the Client ID, private Key, and public key ID must be kept in sync
+// with Plex Cloud: once a JWTToken has been requested for the ClientID, further requests to re-register that ClientID
+// // ([Config.RegisterWithCredentials]/[Config.RegisterWithPIN]) will fail. You will need to create a new ClientID
+// // and re-register.
+//
+// JWTTokens are valid for 7 days.
 //
 // Note: a JWTToken can only be used to access the Plex Cloud API; it cannot be used to access Plex Media Servers.
 // Instead, you can use a JWTToken to look up a Plex Media Server (PMS) (e.g., using devices.xml/devices.json)
 // to find the PMS's Access Token.
-//
-// This allows clients to access a PMS without re-registering with the Plex credentials
-// (i.e., [Config.RegisterWithCredentials]) or user intervention (i.e., [Config.RegisterWithPIN]).
-//
-// This does require persistence, as the Client ID, private Key and public key ID must be kept in sync with Plex Cloud.
-//
-// JWTTokens are valid for 7 days.
-//
-// Note: once a JWTToken has been requested for the ClientID, further requests to re-register that ClientID
-// ([Config.RegisterWithCredentials]/[Config.RegisterWithPIN]) will fail. You will need to create a new ClientID
-// and re-register
 func (c Config) JWTToken(ctx context.Context, privateKey ed25519.PrivateKey, keyID string) (JWTToken, error) {
 	nonce, err := c.nonce(ctx)
 	if err != nil {
@@ -398,8 +398,15 @@ func (c Config) MediaServers(ctx context.Context, token Token) ([]RegisteredDevi
 	return devices, err
 }
 
-func (c Config) TokenSource() TokenSourceFactory {
-	return TokenSourceFactory{config: &c}
+func (c Config) TokenSource(opts ...TokenSourceOption) AuthTokenSource {
+	cfg := tokenSourceConfiguration{
+		config: &c,
+		logger: slog.New(slog.DiscardHandler),
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	return cfg.TokenSource()
 }
 
 // requestFormatter modifies a request before [Config.do] sends to its destination.
