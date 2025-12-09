@@ -93,14 +93,9 @@ func (c *Vault[T]) Load() (T, error) {
 		return zero, fmt.Errorf("unsupported version %d", int(version))
 	}
 
-	// create the encryption key based on the file's salt and the passphrase
-	encryptionKey, err := deriveEncryptionKey(c.passphrase, record.Salt)
-	if err != nil {
-		return zero, fmt.Errorf("derive encryption key: %w", err)
-	}
-
 	// decrypt the data
-	clearData, err := decryptAES(record.Data, encryptionKey[:])
+	encryptionKey, _ := deriveEncryptionKey(c.passphrase, record.Salt)
+	clearData, err := decryptAES(record.Data, encryptionKey)
 	if err != nil {
 		return zero, &ErrDecryptionFailed{Err: err}
 	}
@@ -114,7 +109,7 @@ func (c *Vault[T]) Load() (T, error) {
 	return t, nil
 }
 
-func (c *Vault[T]) Save(t T) error {
+func (c *Vault[T]) Save(v T) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -130,18 +125,15 @@ func (c *Vault[T]) Save(t T) error {
 	}
 
 	// encode the data
-	body, err := json.Marshal(t)
+	body, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("encode data: %w", err)
 	}
 
 	// encrypt the data
-	encryptionKey, err := deriveEncryptionKey(c.passphrase, record.Salt)
-	if err != nil {
-		return fmt.Errorf("derive encryption key: %w", err)
-	}
-	if record.Data, err = encryptAES(body, encryptionKey[:]); err != nil {
-		return &ErrDecryptionFailed{Err: err}
+	encryptionKey, _ := deriveEncryptionKey(c.passphrase, record.Salt)
+	if record.Data, err = encryptAES(body, encryptionKey); err != nil {
+		return fmt.Errorf("encrypt record data: %w", err)
 	}
 
 	// encode the record
@@ -155,7 +147,7 @@ func (c *Vault[T]) Save(t T) error {
 	}
 
 	// cache the content for reading
-	c.content = &t
+	c.content = &v
 
 	return nil
 }

@@ -50,7 +50,7 @@ func TestConfig_WithClientIDAndDevice(t *testing.T) {
 func TestConfig_RegisterWithCredentials(t *testing.T) {
 	cfg, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
-	ctx := t.Context()
+	ctx := WithHTTPClient(t.Context(), &http.Client{Timeout: 10 * time.Second})
 
 	tok, err := cfg.RegisterWithCredentials(ctx, "user", "pass")
 	if err != nil {
@@ -65,7 +65,7 @@ func TestConfig_RegisterWithPIN(t *testing.T) {
 	cfg, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 
-	// RegisterWithPIN should poll until token available
+	// RegisterWithPIN polls until token available
 	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
 	t.Cleanup(cancel)
 	tok2, err := cfg.RegisterWithPIN(ctx, func(resp PINResponse, url string) {}, 10*time.Millisecond)

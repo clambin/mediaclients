@@ -44,8 +44,6 @@ func TestVault(t *testing.T) {
 }
 
 func doTest[T any](t *testing.T, v T) {
-	//t.Helper()
-
 	filename := filepath.Join(t.TempDir(), "vault.enc")
 	c := New[T](filename, "my-passphrase")
 
@@ -61,11 +59,13 @@ func doTest[T any](t *testing.T, v T) {
 	// clear the cache
 	c.content = nil
 
-	got, err := c.Load()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !reflect.DeepEqual(got, v) {
-		t.Fatalf("Load() want: %+v, got: %+v", v, got)
+	for range 2 {
+		got, err := c.Load()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !reflect.DeepEqual(got, v) {
+			t.Fatalf("Load() want: %+v, got: %+v", v, got)
+		}
 	}
 }

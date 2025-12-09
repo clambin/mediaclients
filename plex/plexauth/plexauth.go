@@ -137,7 +137,7 @@ func (c Config) RegisterWithCredentials(ctx context.Context, username, password 
 		c.Device.populateRequest(req)
 	})
 	if err != nil {
-		return "", fmt.Errorf("registrar: %w", err)
+		return "", fmt.Errorf("register: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
