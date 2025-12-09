@@ -197,7 +197,7 @@ func (c Config) PINRequest(ctx context.Context) (PINResponse, string, error) {
 // When the user has confirmed the PINRequest, the AuthToken field will be populated.
 func (c Config) ValidatePIN(ctx context.Context, id int) (AuthToken, ValidatePINResponse, error) {
 	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/api/v2/pins/"+strconv.Itoa(id), nil, http.StatusOK, func(req *http.Request) {
-		// this is only needed once we start using the new flox (https::/app.plex.tv/auth),
+		// this is only needed once we start using the new response url (https://app.plex.tv/auth),
 		// but leaving it here for now, as it doesn't do any harm.
 		c.Device.populateRequest(req)
 	})

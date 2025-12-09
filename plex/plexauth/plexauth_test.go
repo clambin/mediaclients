@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,7 +47,7 @@ func TestConfig_WithClientIDAndDevice(t *testing.T) {
 	}
 }
 
-func TestRegisterWithCredentials(t *testing.T) {
+func TestConfig_RegisterWithCredentials(t *testing.T) {
 	cfg, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
@@ -60,7 +61,36 @@ func TestRegisterWithCredentials(t *testing.T) {
 	}
 }
 
-func TestPINRequestAndValidatePIN(t *testing.T) {
+func TestConfig_RegisterWithPIN(t *testing.T) {
+	cfg, ts := newTestServer(baseConfig)
+	t.Cleanup(ts.Close)
+
+	// RegisterWithPIN should poll until token available
+	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
+	t.Cleanup(cancel)
+	tok2, err := cfg.RegisterWithPIN(ctx, func(resp PINResponse, url string) {}, 10*time.Millisecond)
+	if err != nil {
+		t.Fatalf("RegisterWithPIN error: %v", err)
+	}
+	if tok2.String() != "tok-abc" {
+		t.Fatalf("unexpected token: %s", tok2)
+	}
+}
+
+func TestConfig_RegisterWithPIN_Timeout(t *testing.T) {
+	cfg, ts := newTestServer(baseConfig.WithClientID("pin-timeout-test"))
+	t.Cleanup(ts.Close)
+
+	// RegisterWithPIN should poll until token available
+	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
+	t.Cleanup(cancel)
+	_, err := cfg.RegisterWithPIN(ctx, func(resp PINResponse, url string) {}, 10*time.Millisecond)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected timeout error, got: %v", err)
+	}
+}
+
+func TestConfig_PINRequest_And_ValidatePIN(t *testing.T) {
 	cfg, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
@@ -73,9 +103,12 @@ func TestPINRequestAndValidatePIN(t *testing.T) {
 	if pr.Code != "1234" || !strings.Contains(urlStr, "plex.tv/pin?pin=1234") {
 		t.Fatalf("unexpected pin response/url: %+v %s", pr, urlStr)
 	}
+	if pr.Id != 42 {
+		t.Fatalf("unexpected pin id: %d", pr.Id)
+	}
 
 	// ValidatePIN first without token then with token
-	tok, resp, err := cfg.ValidatePIN(ctx, 42)
+	tok, resp, err := cfg.ValidatePIN(ctx, pr.Id)
 	if err != nil {
 		t.Fatalf("ValidatePIN error: %v", err)
 	}
@@ -86,27 +119,8 @@ func TestPINRequestAndValidatePIN(t *testing.T) {
 		t.Fatalf("unexpected token: %s", tok)
 	}
 
-	// RegisterWithPIN should poll until token available
-	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
-	t.Cleanup(cancel)
-	tok2, err := cfg.RegisterWithPIN(ctx, func(resp PINResponse, url string) {
-		if resp.Code != "1234" {
-			t.Fatalf("unexpected code: %s", resp.Code)
-		}
-		if !strings.HasSuffix(url, "https://plex.tv/pin?pin=1234") {
-			t.Fatalf("unexpected url: %s", url)
-		}
-
-	}, 10*time.Millisecond)
-	if err != nil {
-		t.Fatalf("RegisterWithPIN error: %v", err)
-	}
-	if tok2.String() != "tok-abc" {
-		t.Fatalf("unexpected token: %s", tok2)
-	}
 }
-
-func TestUploadAndGeneratePublicKey(t *testing.T) {
+func TestConfig_GenerateAndUploadPublicKey(t *testing.T) {
 	cfg, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
@@ -128,7 +142,7 @@ func TestUploadAndGeneratePublicKey(t *testing.T) {
 	}
 }
 
-func TestJWTTokenFlow(t *testing.T) {
+func TestConfig_JWTToken(t *testing.T) {
 	cfg, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
@@ -147,7 +161,7 @@ func TestJWTTokenFlow(t *testing.T) {
 	}
 }
 
-func TestRegisteredDevicesAndMediaServers(t *testing.T) {
+func TestConfig_RegisteredDevices_And_MediaServers(t *testing.T) {
 	cfg, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
@@ -180,7 +194,7 @@ func makeFakeServer(cfg *Config) fakeServer {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /users/sign_in.xml", f.handleRegisterWithCredentials)
 	mux.HandleFunc("POST /api/v2/pins", f.handlePIN)
-	mux.HandleFunc("GET /api/v2/pins/42", f.handleValidatePIN)
+	mux.HandleFunc("GET /api/v2/pins/", f.handleValidatePIN)
 	mux.HandleFunc("POST /api/v2/auth/jwk", f.handleJWK)
 	mux.HandleFunc("GET /api/v2/auth/nonce", f.handleNonce)
 	mux.HandleFunc("POST /api/v2/auth/token", f.handleJWToken)
@@ -238,14 +252,26 @@ func (f fakeServer) handlePIN(w http.ResponseWriter, r *http.Request) {
 		plexError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	code, id := "1234", 42
+	if f.config.ClientID == "pin-timeout-test" {
+		code, id = "5678", 43
+	}
+
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"code": "1234",
-		"id":   42,
+		"code": code,
+		"id":   id,
 	})
 }
 
 func (f fakeServer) handleValidatePIN(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/api/v2/pins/")
+	codes := map[string]string{"42": "1234"}
+	code, ok := codes[id]
+	if !ok {
+		http.Error(w, "invalid pin id", http.StatusNotFound)
+		return
+	}
 	wantHeaders := map[string]string{
 		"Accept":                   "application/json",
 		"X-Plex-Client-Identifier": f.config.ClientID,
@@ -257,7 +283,7 @@ func (f fakeServer) handleValidatePIN(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"authToken": "tok-abc",
-		"code":      "1234",
+		"code":      code,
 	})
 }
 
