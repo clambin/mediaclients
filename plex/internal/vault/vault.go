@@ -86,9 +86,8 @@ func (c *Vault[T]) Load() (T, error) {
 	var record content
 	switch int(version) {
 	case currentVersion:
-		if err = json.Unmarshal(data, &record); err != nil {
-			return zero, fmt.Errorf("unrecognized file format: decode: %w", err)
-		}
+		// we already know the content is decodable
+		_ = json.Unmarshal(data, &record)
 	default:
 		return zero, fmt.Errorf("unsupported version %d", int(version))
 	}

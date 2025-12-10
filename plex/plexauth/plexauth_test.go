@@ -59,6 +59,12 @@ func TestConfig_RegisterWithCredentials(t *testing.T) {
 	if tok.String() != "tok-abc" {
 		t.Fatalf("unexpected token: %s", tok)
 	}
+
+	// errors
+	ts.Close()
+	if _, err = cfg.RegisterWithCredentials(ctx, "user", "pass"); err == nil {
+		t.Fatalf("expected error from closed server")
+	}
 }
 
 func TestConfig_RegisterWithPIN(t *testing.T) {
@@ -75,6 +81,12 @@ func TestConfig_RegisterWithPIN(t *testing.T) {
 	if tok2.String() != "tok-abc" {
 		t.Fatalf("unexpected token: %s", tok2)
 	}
+
+	// errors
+	ts.Close()
+	if _, err = cfg.RegisterWithPIN(t.Context(), func(resp PINResponse, url string) {}, 10*time.Millisecond); err == nil {
+		t.Fatalf("expected error from closed server")
+	}
 }
 
 func TestConfig_RegisterWithPIN_Timeout(t *testing.T) {
@@ -88,6 +100,12 @@ func TestConfig_RegisterWithPIN_Timeout(t *testing.T) {
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expected timeout error, got: %v", err)
 	}
+
+	// errors
+	ts.Close()
+	if _, err = cfg.RegisterWithPIN(t.Context(), func(resp PINResponse, url string) {}, time.Minute); err == nil {
+		t.Fatalf("expected error from closed server")
+	}
 }
 
 func TestConfig_PINRequest_And_ValidatePIN(t *testing.T) {
@@ -100,14 +118,11 @@ func TestConfig_PINRequest_And_ValidatePIN(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PINRequest error: %v", err)
 	}
-	if pr.Code != "1234" || !strings.Contains(urlStr, "plex.tv/pin?pin=1234") {
+	if pr.Code != "1234" || !strings.Contains(urlStr, "plex.tv/pin?pin=1234") || pr.Id != 42 {
 		t.Fatalf("unexpected pin response/url: %+v %s", pr, urlStr)
 	}
-	if pr.Id != 42 {
-		t.Fatalf("unexpected pin id: %d", pr.Id)
-	}
 
-	// ValidatePIN first without token then with token
+	// ValidatePIN
 	tok, resp, err := cfg.ValidatePIN(ctx, pr.Id)
 	if err != nil {
 		t.Fatalf("ValidatePIN error: %v", err)
@@ -119,6 +134,19 @@ func TestConfig_PINRequest_And_ValidatePIN(t *testing.T) {
 		t.Fatalf("unexpected token: %s", tok)
 	}
 
+	// Invalid Id
+	if _, _, err = cfg.ValidatePIN(ctx, 43); err == nil {
+		t.Fatalf("expected error from invalid pin id")
+	}
+
+	// errors
+	ts.Close()
+	if _, _, err = cfg.PINRequest(ctx); err == nil {
+		t.Fatalf("expected error from closed server")
+	}
+	if _, _, err = cfg.ValidatePIN(ctx, pr.Id); err == nil {
+		t.Fatalf("expected error from closed server")
+	}
 }
 func TestConfig_GenerateAndUploadPublicKey(t *testing.T) {
 	cfg, ts := newTestServer(baseConfig)
@@ -136,9 +164,14 @@ func TestConfig_GenerateAndUploadPublicKey(t *testing.T) {
 		t.Fatalf("expected non-empty key id")
 	}
 
-	_, _, err = cfg.GenerateAndUploadPublicKey(ctx, "bad-token")
-	if err == nil {
+	if _, _, err = cfg.GenerateAndUploadPublicKey(ctx, "bad-token"); err == nil {
 		t.Fatalf("expected invalid token error")
+	}
+
+	// errors
+	ts.Close()
+	if _, _, err = cfg.GenerateAndUploadPublicKey(ctx, "tok-abc"); err == nil {
+		t.Fatalf("expected error from closed server")
 	}
 }
 
@@ -158,6 +191,12 @@ func TestConfig_JWTToken(t *testing.T) {
 	}
 	if got := tok.String(); got != "tok-abc" {
 		t.Fatalf("unexpected token: %s, want: %s", got, "tok-abc")
+	}
+
+	// errors
+	ts.Close()
+	if _, err = cfg.JWTToken(ctx, privateKey, keyID); err == nil {
+		t.Fatalf("expected error from closed server")
 	}
 }
 
@@ -179,6 +218,15 @@ func TestConfig_RegisteredDevices_And_MediaServers(t *testing.T) {
 	}
 	if len(servers) != 2 || servers[0].Name != "srv1" || servers[1].Name != "srv2" {
 		t.Fatalf("unexpected servers: %+v", servers)
+	}
+
+	// errors
+	ts.Close()
+	if _, err = cfg.RegisteredDevices(ctx, AuthToken("tok-abc")); err == nil {
+		t.Fatalf("expected error from closed server")
+	}
+	if _, err = cfg.MediaServers(context.Background(), AuthToken("tok-abc")); err == nil {
+		t.Fatalf("expected error from closed server")
 	}
 }
 

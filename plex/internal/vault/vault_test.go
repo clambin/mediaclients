@@ -30,7 +30,7 @@ func TestErrDecryptionFailed(t *testing.T) {
 	}
 }
 
-func TestVault(t *testing.T) {
+func TestVault_Types(t *testing.T) {
 	doTest[int](t, 123)
 	doTest[string](t, "hello world")
 	doTest[float64](t, 123.456)
@@ -43,9 +43,56 @@ func TestVault(t *testing.T) {
 	doTest[dataRecord](t, dataRecord{Int: 123, String: "hello world", Float: 123.456, Duration: time.Second * 123})
 }
 
+func TestVault_Errors(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "vault.enc")
+	c := New[string](filename, "my-passphrase")
+
+	// loading an empty should return os.ErrNotExist
+	if _, err := c.Load(); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected os.ErrNotExist, got %v", err)
+	}
+
+	if err := c.Save("hello world"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	c.content = nil
+	if value, err := c.Load(); err != nil || value != "hello world" {
+		t.Fatalf("unexpected value: %v, %v", value, err)
+	}
+
+	// load should fail on invalid passphrase
+	c.content = nil
+	c.passphrase = "invalid-passphrase"
+	var errDecryptionFailed *ErrDecryptionFailed
+	if _, err := c.Load(); !errors.As(err, &errDecryptionFailed) {
+		t.Fatalf("expected ErrDecryptionFailed, got %v", err)
+	}
+
+	// load should fail on invalid file content
+	if err := os.WriteFile(filename, []byte("invalid-content"), 0600); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := c.Load(); err == nil {
+		t.Fatalf("expected error")
+	}
+
+	// version is mandatory in file
+	if err := os.WriteFile(filename, []byte("{ }"), 0600); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := c.Load(); err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 func doTest[T any](t *testing.T, v T) {
 	filename := filepath.Join(t.TempDir(), "vault.enc")
 	c := New[T](filename, "my-passphrase")
+
+	// loading an empty should return
+	if _, err := c.Load(); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected os.ErrNotExist, got %v", err)
+	}
 
 	if err := c.Save(v); err != nil {
 		t.Fatalf("unexpected error: %v", err)
