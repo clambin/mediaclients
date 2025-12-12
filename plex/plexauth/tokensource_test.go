@@ -176,6 +176,34 @@ func Test_jwtTokenSource(t *testing.T) {
 	}
 }
 
+func TestTokenSource_NoRegistrar(t *testing.T) {
+	// auth server
+	cfg, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
+	s.Close()
+
+	ts := cfg.TokenSource(
+		WithJWT(filepath.Join(t.TempDir(), "vault.enc"), "my-passphrase"),
+		WithPMS("srv2"),
+	)
+	ctx := t.Context()
+	_, err := ts.Token(ctx)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if !errors.Is(err, ErrNoRegistrar) {
+		t.Fatalf("unexpected error: %v(%T)", err, err)
+	}
+
+	ts = cfg.TokenSource()
+	_, err = ts.Token(ctx)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if !errors.Is(err, ErrNoRegistrar) {
+		t.Fatalf("unexpected error: %v(%T)", err, err)
+	}
+}
+
 var _ TokenSource = fakeRegistrar{}
 
 type fakeRegistrar struct {

@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var ErrNoRegistrar = errors.New("legacy token required but no registrar found")
+
 // TokenSourceOption provides the configuration to determine the desired TokenSource.
 type TokenSourceOption func(*tokenSourceConfiguration)
 
@@ -158,6 +160,9 @@ type cachingTokenSource struct {
 }
 
 func (s *cachingTokenSource) Token(ctx context.Context) (Token, error) {
+	if s.authTokenSource == nil {
+		return "", ErrNoRegistrar
+	}
 	var err error
 	s.once.Do(func() {
 		s.authToken, err = s.authTokenSource.Token(ctx)
@@ -251,6 +256,10 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 	}
 
 	s.logger.Debug("registering device")
+
+	if s.registrar == nil {
+		return ErrNoRegistrar
+	}
 
 	var token Token
 	token, err = s.registrar.Token(ctx)
