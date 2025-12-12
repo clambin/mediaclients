@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// PINResponse is the response from the PINRequest endpoint
 type PINResponse struct {
 	CreatedAt        time.Time   `json:"createdAt"`
 	ExpiresAt        time.Time   `json:"expiresAt"`
@@ -33,6 +34,8 @@ type PINResponse struct {
 	Trusted   bool `json:"trusted"`
 }
 
+// ValidatePINResponse is the response from the ValidatePIN endpoint.
+// When AuthToken is not null, the user has been authenticated.
 type ValidatePINResponse struct {
 	CreatedAt        time.Time `json:"createdAt"`
 	ExpiresAt        time.Time `json:"expiresAt"`
@@ -60,6 +63,7 @@ type ValidatePINResponse struct {
 	Trusted   bool `json:"trusted"`
 }
 
+// RegisteredDevice represents a registered device on Plex.
 type RegisteredDevice struct {
 	CreatedAt  PlexTimestamp `xml:"createdAt,attr"`
 	LastSeenAt PlexTimestamp `xml:"lastSeenAt,attr"`
@@ -96,6 +100,7 @@ type SyncList struct {
 	Version       int `xml:"version,attr"`
 }
 
+// PlexTimestamp is a custom type for parsing Plex timestamps. It's mainly used by legacy API endpoints.
 type PlexTimestamp time.Time
 
 func (t *PlexTimestamp) UnmarshalXMLAttr(attr xml.Attr) error {

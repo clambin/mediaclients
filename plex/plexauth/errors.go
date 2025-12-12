@@ -12,21 +12,22 @@ import (
 
 var ErrInvalidToken = fmt.Errorf("invalid token")
 
-var _ error = (*ErrPlex)(nil)
+var _ error = (*HTTPError)(nil)
 
-type ErrPlex struct {
-	Reason     string
-	Status     string
-	Body       []byte
+// HTTPError represents an error returned by Plex.
+type HTTPError struct {
+	// Reason contains the error message(s) returned by Plex, if present, otherwise Status.
+	Reason string
+	// Status is the HTTP status returned by Plex.
+	Status string
+	// Body contains the raw response body returned by Plex.
+	Body []byte
+	// StatusCode is the HTTP status code returned by Plex.
 	StatusCode int
 }
 
-func (h *ErrPlex) Error() string {
+func (h *HTTPError) Error() string {
 	return "plex: " + cmp.Or(h.Reason, h.Status)
-}
-
-type AuthError struct {
-	*ErrPlex
 }
 
 func ParsePlexError(r *http.Response) error {
@@ -62,7 +63,7 @@ func ParsePlexError(r *http.Response) error {
 		reason = r.Status
 	}
 
-	return &ErrPlex{
+	return &HTTPError{
 		StatusCode: r.StatusCode,
 		Status:     r.Status,
 		Reason:     reason,

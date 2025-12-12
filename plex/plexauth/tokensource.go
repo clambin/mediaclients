@@ -20,7 +20,7 @@ func WithToken(token AuthToken) TokenSourceOption {
 	}
 }
 
-// WithCredentials uses the given credentials to register a device and get an auth token.
+// WithCredentials uses the given credentials to register a device and get a token.
 func WithCredentials(username, password string) TokenSourceOption {
 	return func(c *tokenSourceConfiguration) {
 		c.registrar = authTokenSourceFunc(func(ctx context.Context) (AuthToken, error) {
@@ -29,7 +29,7 @@ func WithCredentials(username, password string) TokenSourceOption {
 	}
 }
 
-// WithPIN uses the PIN flow to register a device and get an auth token.
+// WithPIN uses the PIN flow to register a device and get a token.
 // Use the callback to inform the user of the PIN URL and to confirm the PIN.
 func WithPIN(cb func(PINResponse, string), pollInterval time.Duration) TokenSourceOption {
 	return func(c *tokenSourceConfiguration) {
@@ -46,7 +46,7 @@ func WithLogger(logger *slog.Logger) TokenSourceOption {
 	}
 }
 
-// WithJWT configures the TokenSource to use a JWT token to request an auth token.
+// WithJWT configures the TokenSource to use a JWT token to request a token.
 //
 // Using JWT requires persistence. storePath is the path to where the secure data will be stored;
 // passphrase is the passphrase used to encrypt the secure data.
@@ -54,6 +54,9 @@ func WithLogger(logger *slog.Logger) TokenSourceOption {
 // Note: once you set up JWT authentication, you can't use credentials or PIN anymore for the device's ClientIdentifier.
 // If you lose the secure data stored at storePath, you'll need to re-register the device with a new ClientIdentifier.
 //
+// Note 2: JWT tokens are relatively new. And in my experience, their use is not always intuitive. The main advantage
+// right now is that a JWT-enabled TokenSource does not reregister each time it starts.  But it comes with an
+// operational burden (the need for persistent data) and some risk. Approach with caution.
 // See [Config.JWTToken] for more details.
 func WithJWT(storePath, passphrase string) TokenSourceOption {
 	return func(c *tokenSourceConfiguration) {
@@ -61,7 +64,7 @@ func WithJWT(storePath, passphrase string) TokenSourceOption {
 	}
 }
 
-// WithPMS specifies the name of the Plex Media Server for which to obtain an auth token.
+// WithPMS specifies the name of the Plex Media Server for which to obtain a token.
 // If not specified, the first Plex Media Server found in the account will be used. If you have multiple Plex Media Servers,
 // you should specify the name of the one you want to use.
 func WithPMS(pmsName string) TokenSourceOption {
@@ -81,7 +84,8 @@ type tokenSourceConfiguration struct {
 	usePMSToken bool
 }
 
-func (c tokenSourceConfiguration) TokenSource() AuthTokenSource {
+func (c tokenSourceConfiguration) tokenSource() AuthTokenSource {
+	// if we have a fixed token, we're done.
 	if c.token != "" {
 		return fixedTokenSource{token: c.token}
 	}
@@ -90,6 +94,7 @@ func (c tokenSourceConfiguration) TokenSource() AuthTokenSource {
 	source := c.registrar
 
 	// If we're not using the Plex Media Server token, we're done.
+	// cache the registrar: we only need to register once.
 	if !c.usePMSToken {
 		// cache the token. we only register once
 		return &cachingTokenSource{authTokenSource: source}
@@ -112,6 +117,7 @@ func (c tokenSourceConfiguration) TokenSource() AuthTokenSource {
 		})
 	}
 
+	// return the final token source: cachingTokenSource -> pmsTokenSource -> [ jwtTokenSource -> ] registrar
 	return &cachingTokenSource{
 		authTokenSource: &pmsTokenSource{
 			tokenSource: source,
@@ -122,7 +128,7 @@ func (c tokenSourceConfiguration) TokenSource() AuthTokenSource {
 	}
 }
 
-// A AuthTokenSource returns a Plex authentication Token
+// AuthTokenSource creates a Plex authentication Token.
 type AuthTokenSource interface {
 	Token(ctx context.Context) (AuthToken, error)
 }
@@ -151,7 +157,7 @@ func (f fixedTokenSource) Token(_ context.Context) (AuthToken, error) {
 	return f.token, nil
 }
 
-// A cachingTokenSource caches the auth token obtained by the underlying AuthTokenSource.
+// A cachingTokenSource caches the token obtained by the underlying AuthTokenSource.
 type cachingTokenSource struct {
 	authTokenSource AuthTokenSource
 	authToken       AuthToken
@@ -198,7 +204,7 @@ func (p pmsTokenSource) Token(ctx context.Context) (AuthToken, error) {
 	return "", fmt.Errorf("media servers: %w", err)
 }
 
-// A jwtTokenSource returns a Plex JWT Token. If needed, it registers a new device using the configured Registrar.
+// A jwtTokenSource returns a Plex JWT Token. If needed, it registers a new device using the configured registrar.
 type jwtTokenSource struct {
 	registrar   AuthTokenSource
 	vault       secureDataVault

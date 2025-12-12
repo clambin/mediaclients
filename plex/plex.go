@@ -17,13 +17,15 @@ func WithHTTPClient(httpClient *http.Client) Option {
 	}
 }
 
-// Client calls the Plex APIs
+// Client calls the Plex API
 type Client struct {
 	httpClient  *http.Client
 	tokenSource plexauth.AuthTokenSource
 	url         string
 }
 
+// New creates a new Plex client, located at the given URL. The tokenSource is used to obtain an authentication token.
+// See [plexauth.Config.TokenSource] for more information.
 func New(url string, tokenSource plexauth.AuthTokenSource, opts ...Option) *Client {
 	client := Client{
 		httpClient:  http.DefaultClient,

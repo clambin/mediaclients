@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseError(t *testing.T) {
+func TestParsePlexError(t *testing.T) {
 	tests := []struct {
 		name       string
 		resp       *http.Response

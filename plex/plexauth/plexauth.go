@@ -35,11 +35,33 @@ var (
 		aud:       "plex.tv",
 		ClientID:  uuid.New().String(),
 	}
+
+	defaultHTTPClient = &http.Client{
+		Timeout:   15 * time.Second,
+		Transport: http.DefaultTransport,
+	}
 )
 
-// ClientDevice identifies the client when using Plex username/password credentials.
+type httpClientType struct{}
+
+// WithHTTPClient returns a new context with an added HTTP client. When passed to [Config]'s methods,
+// they use that HTTP client to perform their authentication calls.
+// If no HTTP client is set, a default HTTP client is used.
+func WithHTTPClient(ctx context.Context, httpClient *http.Client) context.Context {
+	return context.WithValue(ctx, httpClientType{}, httpClient)
+}
+
+// httpClient returns the HTTP set in the context. If none is set, it returns a default client.
+func httpClient(ctx context.Context) *http.Client {
+	if c, ok := ctx.Value(httpClientType{}).(*http.Client); ok {
+		return c
+	}
+	return defaultHTTPClient
+}
+
+// Device identifies the client when using Plex username/password credentials.
 // Although this package provides a default, it is recommended to set this yourself.
-type ClientDevice struct {
+type Device struct {
 	// Product is the name of the client product.
 	// Passed as X-Plex-Product header.
 	// In Authorized Devices, it is shown on line 3.
@@ -70,16 +92,16 @@ type ClientDevice struct {
 	DeviceName string
 }
 
-func (id ClientDevice) populateRequest(req *http.Request) {
+func (id Device) populateRequest(req *http.Request) {
 	headers := map[string]string{
-		"X-Plex-Product":             id.Product,
-		"X-Plex-Version":             id.Version,
-		"X-Plex-Platform":            id.Platform,
-		"X-Plex-Platform-Version":    id.PlatformVersion,
-		"X-Plex-ClientDevice":        id.Device,
-		"X-Plex-ClientDevice-Vendor": id.DeviceVendor,
-		"X-Plex-ClientDevice-Name":   id.DeviceName,
-		"X-Plex-Model":               id.Model,
+		"X-Plex-Product":          id.Product,
+		"X-Plex-Version":          id.Version,
+		"X-Plex-Platform":         id.Platform,
+		"X-Plex-Platform-Version": id.PlatformVersion,
+		"X-Plex-Device":           id.Device,
+		"X-Plex-Device-Vendor":    id.DeviceVendor,
+		"X-Plex-Device-Name":      id.DeviceName,
+		"X-Plex-Model":            id.Model,
 	}
 	for key, value := range headers {
 		if value != "" {
@@ -91,7 +113,7 @@ func (id ClientDevice) populateRequest(req *http.Request) {
 // Config contains the configuration required to authenticate with Plex.
 type Config struct {
 	// Device information used during username/password authentication.
-	Device ClientDevice
+	Device Device
 	// AuthURL is the base URL of the legacy Plex authentication endpoint.
 	// It is used for initial username/password authentication.
 	// This should normally not be changed.
@@ -110,15 +132,15 @@ type Config struct {
 	TokenTTL time.Duration
 }
 
-// WithClientID sets the client ID.
+// WithClientID sets the Client ID.
 func (c Config) WithClientID(clientID string) Config {
 	c.ClientID = clientID
 	return c
 }
 
-// WithClientDevice sets the device information used during username/password authentication.
-// See the [ClientDevice] type for details on what each field means.
-func (c Config) WithClientDevice(device ClientDevice) Config {
+// WithDevice sets the device information used during username/password and pin authentication.
+// See the [Device] type for details on what each field means.
+func (c Config) WithDevice(device Device) Config {
 	c.Device = device
 	return c
 }
@@ -271,21 +293,21 @@ func (c Config) UploadPublicKey(ctx context.Context, publicKey ed25519.PublicKey
 // JWTToken is a new authentication mechanism introduced in Plex Cloud, based on JSON Web Tokens (JWT).
 //
 // JWTTokens increase security by eliminating the need for a PIN or username/password combination each time
-// a client starts.  As setting up JWT requires a valid auth token, a client only needs to register once.
+// a client starts. As setting up JWT requires a valid token, a client only needs to register once.
 //
 // To create a JWTToken, a client generates a new ed25519 keypair and uploads the public key to Plex
 // (using [Config.GenerateAndUploadPublicKey] or [Config.UploadPublicKey], using a valid Plex token).
 // The client can then use the private key and the public key's ID to generate a new JWTToken.
 //
-// This does require persistence, as the Client ID, private Key, and public key ID must be kept in sync
+// This does require persistence, as the Client ID, private key, and public key ID must be kept in sync
 // with Plex Cloud: once a JWTToken has been requested for the ClientID, further requests to re-register that ClientID
-// // ([Config.RegisterWithCredentials]/[Config.RegisterWithPIN]) will fail. You will need to create a new ClientID
-// // and re-register.
+// ([Config.RegisterWithCredentials]/[Config.RegisterWithPIN]) will fail. You will need to generate a new ClientID
+// and re-register.
 //
 // JWTTokens are valid for 7 days.
 //
 // Note: a JWTToken can only be used to access the Plex Cloud API; it cannot be used to access Plex Media Servers.
-// Instead, you can use a JWTToken to look up a Plex Media Server (PMS) (e.g., using devices.xml/devices.json)
+// Instead, you can use a JWTToken to look up a Plex Media Server (PMS) (using devices.xml)
 // to find the PMS's Access Token.
 func (c Config) JWTToken(ctx context.Context, privateKey ed25519.PrivateKey, keyID string) (JWTToken, error) {
 	nonce, err := c.nonce(ctx)
@@ -398,6 +420,7 @@ func (c Config) MediaServers(ctx context.Context, token Token) ([]RegisteredDevi
 	return devices, err
 }
 
+// TokenSource returns an [AuthTokenSource] that can be passed to plex.New() to create an authenticated Plex client.
 func (c Config) TokenSource(opts ...TokenSourceOption) AuthTokenSource {
 	cfg := tokenSourceConfiguration{
 		config: &c,
@@ -406,7 +429,7 @@ func (c Config) TokenSource(opts ...TokenSourceOption) AuthTokenSource {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	return cfg.TokenSource()
+	return cfg.tokenSource()
 }
 
 // requestFormatter modifies a request before [Config.do] sends to its destination.

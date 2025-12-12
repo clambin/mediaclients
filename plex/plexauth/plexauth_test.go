@@ -19,7 +19,7 @@ import (
 
 var baseConfig = DefaultConfig.
 	WithClientID("abc").
-	WithClientDevice(ClientDevice{
+	WithDevice(Device{
 		Product:         "TestProduct",
 		Version:         "1.0",
 		Platform:        "unit",
@@ -38,7 +38,7 @@ func newTestServer(cfg Config) (Config, *httptest.Server) {
 }
 
 func TestConfig_WithClientIDAndDevice(t *testing.T) {
-	cfg := DefaultConfig.WithClientID("abc").WithClientDevice(ClientDevice{Product: "X"})
+	cfg := DefaultConfig.WithClientID("abc").WithDevice(Device{Product: "X"})
 	if cfg.ClientID != "abc" {
 		t.Fatalf("expected client id to be set")
 	}
@@ -253,17 +253,17 @@ func makeFakeServer(cfg *Config) fakeServer {
 
 func (f fakeServer) handleRegisterWithCredentials(w http.ResponseWriter, r *http.Request) {
 	wantHeaders := map[string]string{
-		"Content-Type":               "application/x-www-form-urlencoded",
-		"Accept":                     "application/xml",
-		"X-Plex-Client-Identifier":   f.config.ClientID,
-		"X-Plex-Product":             f.config.Device.Product,
-		"X-Plex-Version":             f.config.Device.Version,
-		"X-Plex-Platform":            f.config.Device.Platform,
-		"X-Plex-Platform-Version":    f.config.Device.PlatformVersion,
-		"X-Plex-ClientDevice":        f.config.Device.Device,
-		"X-Plex-ClientDevice-Vendor": f.config.Device.DeviceVendor,
-		"X-Plex-ClientDevice-Name":   f.config.Device.DeviceName,
-		"X-Plex-Model":               f.config.Device.Model,
+		"Content-Type":             "application/x-www-form-urlencoded",
+		"Accept":                   "application/xml",
+		"X-Plex-Client-Identifier": f.config.ClientID,
+		"X-Plex-Product":           f.config.Device.Product,
+		"X-Plex-Version":           f.config.Device.Version,
+		"X-Plex-Platform":          f.config.Device.Platform,
+		"X-Plex-Platform-Version":  f.config.Device.PlatformVersion,
+		"X-Plex-Device":            f.config.Device.Device,
+		"X-Plex-Device-Vendor":     f.config.Device.DeviceVendor,
+		"X-Plex-Device-Name":       f.config.Device.DeviceName,
+		"X-Plex-Model":             f.config.Device.Model,
 	}
 	if err := validateRequest(r, wantHeaders); err != nil {
 		plexError(w, http.StatusBadRequest, err.Error())
@@ -285,16 +285,16 @@ func (f fakeServer) handleRegisterWithCredentials(w http.ResponseWriter, r *http
 
 func (f fakeServer) handlePIN(w http.ResponseWriter, r *http.Request) {
 	wantHeaders := map[string]string{
-		"Accept":                     "application/json",
-		"X-Plex-Client-Identifier":   f.config.ClientID,
-		"X-Plex-Product":             f.config.Device.Product,
-		"X-Plex-Version":             f.config.Device.Version,
-		"X-Plex-Platform":            f.config.Device.Platform,
-		"X-Plex-Platform-Version":    f.config.Device.PlatformVersion,
-		"X-Plex-ClientDevice":        f.config.Device.Device,
-		"X-Plex-ClientDevice-Vendor": f.config.Device.DeviceVendor,
-		"X-Plex-ClientDevice-Name":   f.config.Device.DeviceName,
-		"X-Plex-Model":               f.config.Device.Model,
+		"Accept":                   "application/json",
+		"X-Plex-Client-Identifier": f.config.ClientID,
+		"X-Plex-Product":           f.config.Device.Product,
+		"X-Plex-Version":           f.config.Device.Version,
+		"X-Plex-Platform":          f.config.Device.Platform,
+		"X-Plex-Platform-Version":  f.config.Device.PlatformVersion,
+		"X-Plex-Device":            f.config.Device.Device,
+		"X-Plex-Device-Vendor":     f.config.Device.DeviceVendor,
+		"X-Plex-Device-Name":       f.config.Device.DeviceName,
+		"X-Plex-Model":             f.config.Device.Model,
 	}
 	if err := validateRequest(r, wantHeaders); err != nil {
 		plexError(w, http.StatusBadRequest, err.Error())
