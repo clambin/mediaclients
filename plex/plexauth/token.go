@@ -1,40 +1,44 @@
 package plexauth
 
 import (
+	"errors"
 	"time"
+
+	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-type Token interface {
-	String() string
-	IsValid() bool
-}
+type Token string
 
-var (
-	_ Token = AuthToken("")
-	_ Token = JWTToken{}
-)
-
-// AuthToken is a Plex authentication token. It gives access to both the Plex Media Server and the Plex Cloud API.
-type AuthToken string
-
-func (t AuthToken) String() string {
+// String returns the token as a string.
+func (t Token) String() string {
 	return string(t)
 }
 
-func (t AuthToken) IsValid() bool {
-	return t != ""
+// IsLegacy returns true if the token is a legacy token (20-character string).
+func (t Token) IsLegacy() bool {
+	return len(t) == 20
 }
 
-// JWTToken is a new authentication mechanism introduced in Plex Cloud, based on JSON Web Tokens (JWT).
-type JWTToken struct {
-	expiration time.Time
-	AuthToken
+// IsJWT returns true if the token is a JWT.
+// Note: returns true even if the token is invalid (e.g. expired).
+func (t Token) IsJWT() bool {
+	_, err := jwt.Parse([]byte(t), jwt.WithVerify(false))
+	return err == nil || errors.Is(err, jwt.TokenExpiredError())
 }
 
-func (j JWTToken) IsValid() bool {
-	return j.AuthToken.IsValid() && !j.Expired()
-}
-
-func (j JWTToken) Expired() bool {
-	return time.Now().After(j.expiration)
+// IsValid returns true if the token is valid.
+// Note: for JWT, the token is valid if it is not expired. The signature, if present, is not verified.
+func (t Token) IsValid() bool {
+	if t.IsLegacy() {
+		return true
+	}
+	tok, err := jwt.Parse([]byte(t), jwt.WithVerify(false))
+	if err != nil {
+		return false
+	}
+	exp, ok := tok.Expiration()
+	if !ok {
+		return false
+	}
+	return exp.After(time.Now())
 }

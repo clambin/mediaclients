@@ -56,7 +56,7 @@ func TestConfig_RegisterWithCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RegisterWithCredentials error: %v", err)
 	}
-	if tok.String() != "tok-abc" {
+	if tok.String() != legacyToken {
 		t.Fatalf("unexpected token: %s", tok)
 	}
 
@@ -78,7 +78,7 @@ func TestConfig_RegisterWithPIN(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RegisterWithPIN error: %v", err)
 	}
-	if tok2.String() != "tok-abc" {
+	if tok2.String() != legacyToken {
 		t.Fatalf("unexpected token: %s", tok2)
 	}
 
@@ -130,7 +130,7 @@ func TestConfig_PINRequest_And_ValidatePIN(t *testing.T) {
 	if resp.Code != "1234" {
 		t.Fatalf("unexpected code: %s", resp.Code)
 	}
-	if tok.String() != "tok-abc" {
+	if tok.String() != legacyToken {
 		t.Fatalf("unexpected token: %s", tok)
 	}
 
@@ -153,7 +153,7 @@ func TestConfig_GenerateAndUploadPublicKey(t *testing.T) {
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
 
-	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, "tok-abc")
+	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, legacyToken)
 	if err != nil {
 		t.Fatalf("GenerateAndUploadPublicKey error: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestConfig_GenerateAndUploadPublicKey(t *testing.T) {
 
 	// errors
 	ts.Close()
-	if _, _, err = cfg.GenerateAndUploadPublicKey(ctx, "tok-abc"); err == nil {
+	if _, _, err = cfg.GenerateAndUploadPublicKey(ctx, legacyToken); err == nil {
 		t.Fatalf("expected error from closed server")
 	}
 }
@@ -180,7 +180,7 @@ func TestConfig_JWTToken(t *testing.T) {
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
 
-	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, "tok-abc")
+	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, legacyToken)
 	if err != nil {
 		t.Fatalf("GenerateAndUploadPublicKey error: %v", err)
 	}
@@ -189,8 +189,8 @@ func TestConfig_JWTToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("JWTToken error: %v", err)
 	}
-	if got := tok.String(); got != "tok-abc" {
-		t.Fatalf("unexpected token: %s, want: %s", got, "tok-abc")
+	if got := tok.String(); got != legacyToken {
+		t.Fatalf("unexpected token: %s, want: %s", got, legacyToken)
 	}
 
 	// errors
@@ -205,14 +205,14 @@ func TestConfig_RegisteredDevices_And_MediaServers(t *testing.T) {
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
 
-	devs, err := cfg.RegisteredDevices(ctx, AuthToken("tok-abc"))
+	devs, err := cfg.RegisteredDevices(ctx, legacyToken)
 	if err != nil {
 		t.Fatalf("RegisteredDevices error: %v", err)
 	}
 	if len(devs) != 3 {
 		t.Fatalf("expected 2 devices, got %d", len(devs))
 	}
-	servers, err := cfg.MediaServers(context.Background(), AuthToken("tok-abc"))
+	servers, err := cfg.MediaServers(context.Background(), legacyToken)
 	if err != nil {
 		t.Fatalf("MediaServers error: %v", err)
 	}
@@ -222,10 +222,10 @@ func TestConfig_RegisteredDevices_And_MediaServers(t *testing.T) {
 
 	// errors
 	ts.Close()
-	if _, err = cfg.RegisteredDevices(ctx, AuthToken("tok-abc")); err == nil {
+	if _, err = cfg.RegisteredDevices(ctx, legacyToken); err == nil {
 		t.Fatalf("expected error from closed server")
 	}
-	if _, err = cfg.MediaServers(context.Background(), AuthToken("tok-abc")); err == nil {
+	if _, err = cfg.MediaServers(context.Background(), legacyToken); err == nil {
 		t.Fatalf("expected error from closed server")
 	}
 }
@@ -236,6 +236,8 @@ type fakeServer struct {
 	http.Handler
 	config *Config
 }
+
+const legacyToken = "AuJSayxZ8P7WKmxy9xLT"
 
 func makeFakeServer(cfg *Config) fakeServer {
 	f := fakeServer{config: cfg}
@@ -280,7 +282,7 @@ func (f fakeServer) handleRegisterWithCredentials(w http.ResponseWriter, r *http
 	_ = xml.NewEncoder(w).Encode(struct {
 		XMLName             xml.Name `xml:"user"`
 		AuthenticationToken string   `xml:"authenticationToken,attr"`
-	}{AuthenticationToken: "tok-abc"})
+	}{AuthenticationToken: legacyToken})
 }
 
 func (f fakeServer) handlePIN(w http.ResponseWriter, r *http.Request) {
@@ -330,7 +332,7 @@ func (f fakeServer) handleValidatePIN(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"authToken": "tok-abc",
+		"authToken": legacyToken,
 		"code":      code,
 	})
 }
@@ -339,7 +341,7 @@ func (f fakeServer) handleJWK(w http.ResponseWriter, r *http.Request) {
 	wantHeaders := map[string]string{
 		"Accept":                   "application/json",
 		"X-Plex-Client-Identifier": f.config.ClientID,
-		"X-Plex-Token":             "tok-abc",
+		"X-Plex-Token":             legacyToken,
 	}
 	if err := validateRequest(r, wantHeaders); err != nil {
 		plexError(w, http.StatusBadRequest, err.Error())
@@ -405,14 +407,14 @@ func (f fakeServer) handleJWToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{"auth_token": "tok-abc"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"auth_token": legacyToken}) // TODO: should be jwt!
 }
 
 func (f fakeServer) handleDevices(w http.ResponseWriter, r *http.Request) {
 	wantHeaders := map[string]string{
 		"Accept":                   "application/xml",
 		"X-Plex-Client-Identifier": f.config.ClientID,
-		"X-Plex-Token":             "tok-abc",
+		"X-Plex-Token":             legacyToken,
 	}
 	if err := validateRequest(r, wantHeaders); err != nil {
 		plexError(w, http.StatusBadRequest, err.Error())

@@ -33,7 +33,7 @@ func TestTokenSource_WithCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if token.String() != "tok-abc" {
+	if token.String() != legacyToken {
 		t.Fatalf("unexpected token: %s", token)
 	}
 
@@ -58,7 +58,7 @@ func TestTokenSource_WithPIN(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if token.String() != "tok-abc" {
+	if token.String() != legacyToken {
 		t.Fatalf("unexpected token: %s", token)
 	}
 
@@ -137,7 +137,7 @@ func Test_jwtTokenSource(t *testing.T) {
 	logger := slog.New(slog.DiscardHandler) //slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	v := fakeVault{}
 	ts := jwtTokenSource{
-		registrar: fakeRegistrar{authToken: "tok-abc"},
+		registrar: fakeRegistrar{token: legacyToken},
 		vault:     &v,
 		logger:    logger,
 		config:    &cfg,
@@ -145,29 +145,29 @@ func Test_jwtTokenSource(t *testing.T) {
 	ctx := t.Context()
 
 	// happy path: no secure data, the device is registered.
-	token, err := ts.token(ctx)
+	token, err := ts.Token(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if token.String() != "tok-abc" {
+	if token.String() != legacyToken {
 		t.Fatalf("unexpected token: %s", token)
 	}
 
 	// secure data exists, but it contains an invalid Client ID.
 	v.err = ErrInvalidClientID
 	ts = jwtTokenSource{
-		registrar: fakeRegistrar{authToken: "tok-abc"},
+		registrar: fakeRegistrar{token: legacyToken},
 		vault:     &v,
 		logger:    logger,
 		config:    &cfg,
 	}
 
 	// secure data is invalid, the device is re-registered, and a new token is returned.
-	token, err = ts.token(ctx)
+	token, err = ts.Token(ctx)
 	if err != nil {
 		t.Fatalf("expected error, got nil")
 	}
-	if token.String() != "tok-abc" {
+	if token.String() != legacyToken {
 		t.Fatalf("unexpected token: %s", token)
 	}
 	if secureData := v.data.Load(); secureData.ClientID != "my-client-id" {
@@ -175,15 +175,15 @@ func Test_jwtTokenSource(t *testing.T) {
 	}
 }
 
-var _ AuthTokenSource = fakeRegistrar{}
+var _ TokenSource = fakeRegistrar{}
 
 type fakeRegistrar struct {
-	authToken AuthToken
-	err       error
+	token Token
+	err   error
 }
 
-func (f fakeRegistrar) Token(_ context.Context) (AuthToken, error) {
-	return f.authToken, f.err
+func (f fakeRegistrar) Token(_ context.Context) (Token, error) {
+	return f.token, f.err
 }
 
 var _ secureDataVault = (*fakeVault)(nil)

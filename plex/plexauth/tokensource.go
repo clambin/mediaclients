@@ -14,7 +14,7 @@ import (
 type TokenSourceOption func(*tokenSourceConfiguration)
 
 // WithToken configures a TokenSource to use an existing, fixed token.
-func WithToken(token AuthToken) TokenSourceOption {
+func WithToken(token Token) TokenSourceOption {
 	return func(c *tokenSourceConfiguration) {
 		c.token = token
 	}
@@ -23,7 +23,7 @@ func WithToken(token AuthToken) TokenSourceOption {
 // WithCredentials uses the given credentials to register a device and get a token.
 func WithCredentials(username, password string) TokenSourceOption {
 	return func(c *tokenSourceConfiguration) {
-		c.registrar = authTokenSourceFunc(func(ctx context.Context) (AuthToken, error) {
+		c.registrar = tokenSourceFunc(func(ctx context.Context) (Token, error) {
 			return c.config.RegisterWithCredentials(ctx, username, password)
 		})
 	}
@@ -33,7 +33,7 @@ func WithCredentials(username, password string) TokenSourceOption {
 // Use the callback to inform the user of the PIN URL and to confirm the PIN.
 func WithPIN(cb func(PINResponse, string), pollInterval time.Duration) TokenSourceOption {
 	return func(c *tokenSourceConfiguration) {
-		c.registrar = authTokenSourceFunc(func(ctx context.Context) (AuthToken, error) {
+		c.registrar = tokenSourceFunc(func(ctx context.Context) (Token, error) {
 			return c.config.RegisterWithPIN(ctx, cb, pollInterval)
 		})
 	}
@@ -76,15 +76,15 @@ func WithPMS(pmsName string) TokenSourceOption {
 
 type tokenSourceConfiguration struct {
 	config      *Config
-	registrar   AuthTokenSource
-	token       AuthToken
+	registrar   TokenSource
+	token       Token
 	logger      *slog.Logger
 	vault       *jwtDataStore
 	pmsName     string
 	usePMSToken bool
 }
 
-func (c tokenSourceConfiguration) tokenSource() AuthTokenSource {
+func (c tokenSourceConfiguration) tokenSource() TokenSource {
 	// if we have a fixed token, we're done.
 	if c.token != "" {
 		return fixedTokenSource{token: c.token}
@@ -108,13 +108,7 @@ func (c tokenSourceConfiguration) tokenSource() AuthTokenSource {
 			logger:    c.logger.With("component", "jwtTokenSource"),
 			config:    c.config,
 		}
-		source = authTokenSourceFunc(func(ctx context.Context) (AuthToken, error) {
-			t, err := jwts.token(ctx)
-			if err != nil {
-				return "", err
-			}
-			return AuthToken(t.String()), nil
-		})
+		source = jwts
 	}
 
 	// return the final token source: cachingTokenSource -> pmsTokenSource -> [ jwtTokenSource -> ] registrar
@@ -128,43 +122,43 @@ func (c tokenSourceConfiguration) tokenSource() AuthTokenSource {
 	}
 }
 
-// AuthTokenSource creates a Plex authentication Token.
-type AuthTokenSource interface {
-	Token(ctx context.Context) (AuthToken, error)
+// TokenSource creates a Plex authentication Token.
+type TokenSource interface {
+	Token(ctx context.Context) (Token, error)
 }
 
-var _ AuthTokenSource = (*authTokenSourceFunc)(nil)
+var _ TokenSource = (*tokenSourceFunc)(nil)
 
-// authTokenSourceFunc is an adapter to convert a function with the correct signature into an AuthTokenSource.
-type authTokenSourceFunc func(context.Context) (AuthToken, error)
+// tokenSourceFunc is an adapter to convert a function with the correct signature into an TokenSource.
+type tokenSourceFunc func(context.Context) (Token, error)
 
-func (a authTokenSourceFunc) Token(ctx context.Context) (AuthToken, error) {
+func (a tokenSourceFunc) Token(ctx context.Context) (Token, error) {
 	return a(ctx)
 }
 
 var (
-	_ AuthTokenSource = fixedTokenSource{}
-	_ AuthTokenSource = (*cachingTokenSource)(nil)
-	_ AuthTokenSource = (*pmsTokenSource)(nil)
+	_ TokenSource = fixedTokenSource{}
+	_ TokenSource = (*cachingTokenSource)(nil)
+	_ TokenSource = (*pmsTokenSource)(nil)
 )
 
 // fixedTokenSource returns a fixed token.
 type fixedTokenSource struct {
-	token AuthToken
+	token Token
 }
 
-func (f fixedTokenSource) Token(_ context.Context) (AuthToken, error) {
+func (f fixedTokenSource) Token(_ context.Context) (Token, error) {
 	return f.token, nil
 }
 
-// A cachingTokenSource caches the token obtained by the underlying AuthTokenSource.
+// A cachingTokenSource caches the token obtained by the underlying TokenSource.
 type cachingTokenSource struct {
-	authTokenSource AuthTokenSource
-	authToken       AuthToken
+	authTokenSource TokenSource
+	authToken       Token
 	lock            sync.Mutex
 }
 
-func (s *cachingTokenSource) Token(ctx context.Context) (AuthToken, error) {
+func (s *cachingTokenSource) Token(ctx context.Context) (Token, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	var err error
@@ -176,26 +170,26 @@ func (s *cachingTokenSource) Token(ctx context.Context) (AuthToken, error) {
 
 // A pmsTokenSource returns the Plex authentication token for a given Plex Media Server.
 type pmsTokenSource struct {
-	tokenSource AuthTokenSource
+	tokenSource TokenSource
 	config      *Config
 	pmsName     string
 	logger      *slog.Logger
 }
 
-func (p pmsTokenSource) Token(ctx context.Context) (AuthToken, error) {
+func (p pmsTokenSource) Token(ctx context.Context) (Token, error) {
 	// get a token to access the Plex Cloud API
 	token, err := p.tokenSource.Token(ctx)
 	if err != nil {
 		return "", fmt.Errorf("token: %w", err)
 	}
-	p.logger.Debug("got cloud token")
+	p.logger.Debug("got cloud token", "jwt", token.IsJWT())
 	var mediaServers []RegisteredDevice
 	if mediaServers, err = p.config.MediaServers(ctx, token); err == nil {
 		for _, server := range mediaServers {
 			p.logger.Debug("media server found", "name", server.Name)
 			if server.Name == p.pmsName || p.pmsName == "" {
 				p.logger.Debug("media server matched")
-				return AuthToken(server.Token), nil
+				return Token(server.Token), nil
 			}
 		}
 		err = fmt.Errorf("media server %q not found", p.pmsName)
@@ -206,7 +200,7 @@ func (p pmsTokenSource) Token(ctx context.Context) (AuthToken, error) {
 
 // A jwtTokenSource returns a Plex JWT Token. If needed, it registers a new device using the configured registrar.
 type jwtTokenSource struct {
-	registrar   AuthTokenSource
+	registrar   TokenSource
 	vault       secureDataVault
 	logger      *slog.Logger
 	config      *Config
@@ -218,6 +212,21 @@ type jwtTokenSource struct {
 type secureDataVault interface {
 	Load() (jwtSecureData, error)
 	Save(jwtSecureData) error
+}
+
+func (s *jwtTokenSource) Token(ctx context.Context) (token Token, err error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if !s.initialized {
+		if err = s.initialize(ctx); err != nil {
+			return token, fmt.Errorf("init: %w", err)
+		}
+		s.initialized = true
+	}
+	if token, err = s.config.JWTToken(ctx, s.secureData.PrivateKey, s.secureData.KeyID); err == nil {
+		s.logger.Debug("got JWT token")
+	}
+	return token, err
 }
 
 func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
@@ -246,8 +255,8 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 
 	s.logger.Debug("registering device")
 
-	var authToken AuthToken
-	authToken, err = s.registrar.Token(ctx)
+	var token Token
+	token, err = s.registrar.Token(ctx)
 	if err != nil {
 		return fmt.Errorf("registrar: %w", err)
 	}
@@ -255,7 +264,7 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 	s.logger.Debug("device registered successfully")
 
 	s.secureData.ClientID = s.config.ClientID
-	if s.secureData.PrivateKey, s.secureData.KeyID, err = s.config.GenerateAndUploadPublicKey(ctx, authToken); err != nil {
+	if s.secureData.PrivateKey, s.secureData.KeyID, err = s.config.GenerateAndUploadPublicKey(ctx, token); err != nil {
 		return fmt.Errorf("publish key: %w", err)
 	}
 
@@ -267,16 +276,4 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 
 	s.logger.Debug("token data saved successfully")
 	return nil
-}
-
-func (s *jwtTokenSource) token(ctx context.Context) (token JWTToken, err error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	if !s.initialized {
-		if err = s.initialize(ctx); err != nil {
-			return token, fmt.Errorf("init: %w", err)
-		}
-		s.initialized = true
-	}
-	return s.config.JWTToken(ctx, s.secureData.PrivateKey, s.secureData.KeyID)
 }
