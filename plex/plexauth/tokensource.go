@@ -102,13 +102,12 @@ func (c tokenSourceConfiguration) tokenSource() TokenSource {
 
 	// If we're using JWT tokens, use jwtTokenSource to register the device (if needed) and obtain a JWT token.
 	if c.vault != nil {
-		jwts := &jwtTokenSource{
+		source = &jwtTokenSource{
 			registrar: source,
 			vault:     c.vault,
 			logger:    c.logger.With("component", "jwtTokenSource"),
 			config:    c.config,
 		}
-		source = jwts
 	}
 
 	// return the final token source: cachingTokenSource -> pmsTokenSource -> [ jwtTokenSource -> ] registrar
@@ -155,16 +154,14 @@ func (f fixedTokenSource) Token(_ context.Context) (Token, error) {
 type cachingTokenSource struct {
 	authTokenSource TokenSource
 	authToken       Token
-	lock            sync.Mutex
+	once            sync.Once
 }
 
 func (s *cachingTokenSource) Token(ctx context.Context) (Token, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
 	var err error
-	if !s.authToken.IsValid() {
+	s.once.Do(func() {
 		s.authToken, err = s.authTokenSource.Token(ctx)
-	}
+	})
 	return s.authToken, err
 }
 
