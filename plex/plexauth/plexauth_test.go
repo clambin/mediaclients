@@ -237,7 +237,7 @@ type fakeServer struct {
 	config *Config
 }
 
-const legacyToken = "AuJSayxZ8P7WKmxy9xLT"
+const legacyToken = "12345678901234567890"
 
 func makeFakeServer(cfg *Config) fakeServer {
 	f := fakeServer{config: cfg}

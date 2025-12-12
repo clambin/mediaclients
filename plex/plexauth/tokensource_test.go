@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -38,7 +39,7 @@ func TestTokenSource_WithCredentials(t *testing.T) {
 	}
 
 	// clear the cached token
-	ts.(*cachingTokenSource).authToken = ""
+	ts.(*cachingTokenSource).once = sync.Once{}
 	// a failed registrar will fail the token source
 	ts.(*cachingTokenSource).authTokenSource = fakeRegistrar{err: errors.New("test error")}
 	_, err = ts.Token(t.Context())
@@ -63,7 +64,7 @@ func TestTokenSource_WithPIN(t *testing.T) {
 	}
 
 	// clear the cached token
-	ts.(*cachingTokenSource).authToken = ""
+	ts.(*cachingTokenSource).once = sync.Once{}
 	// a failed registrar will fail the token source
 	ts.(*cachingTokenSource).authTokenSource = fakeRegistrar{err: errors.New("test error")}
 	_, err = ts.Token(t.Context())
@@ -98,7 +99,7 @@ func TestTokenSource_WithPMS(t *testing.T) {
 	}
 
 	// clear the cached token
-	ts.(*cachingTokenSource).authToken = ""
+	ts.(*cachingTokenSource).once = sync.Once{}
 	// if registering fails, an error is returned
 	ts.(*cachingTokenSource).authTokenSource.(*pmsTokenSource).tokenSource = fakeRegistrar{err: errors.New("test error")}
 	_, err = ts.Token(t.Context())
