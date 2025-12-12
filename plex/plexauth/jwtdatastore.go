@@ -30,17 +30,19 @@ func newJWTDataStore(filePath string, passphrase string, clientID string) *jwtDa
 	}
 }
 
+// Save saves the given data to the data store.
 func (s *jwtDataStore) Save(data jwtSecureData) error {
 	return s.vault.Save(data)
 }
 
+// Load loads the data from the data store. It returns ErrInvalidClientID if the data's client ID does not match.
 func (s *jwtDataStore) Load() (jwtSecureData, error) {
 	data, err := s.vault.Load()
 	if err != nil {
 		return jwtSecureData{}, err
 	}
 	if data.ClientID != s.clientID {
-		return jwtSecureData{}, ErrInvalidClientID
+		err = ErrInvalidClientID
 	}
-	return data, nil
+	return data, err
 }

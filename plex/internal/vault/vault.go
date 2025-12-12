@@ -167,14 +167,11 @@ func deriveEncryptionKey(passphrase string, salt []byte) ([]byte, error) {
 
 // AES encryption
 func encryptAES(data []byte, key []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
+	aesGCM, err := initAES(key)
 	if err != nil {
 		return nil, err
 	}
-	aesGCM, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
+
 	nonce := make([]byte, aesGCM.NonceSize())
 	if _, err = rand.Read(nonce); err != nil {
 		return nil, err
@@ -184,18 +181,24 @@ func encryptAES(data []byte, key []byte) ([]byte, error) {
 
 // AES decryption
 func decryptAES(data []byte, key []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
+	aesGCM, err := initAES(key)
 	if err != nil {
 		return nil, err
 	}
-	aesGCM, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
+
 	nonceSize := aesGCM.NonceSize()
 	if len(data) < nonceSize {
 		return nil, errors.New("invalid ciphertext")
 	}
 	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+
 	return aesGCM.Open(nil, nonce, ciphertext, nil)
+}
+
+func initAES(key []byte) (cipher.AEAD, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	return cipher.NewGCM(block)
 }

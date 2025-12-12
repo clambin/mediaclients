@@ -38,8 +38,11 @@ func TestJWTDataStore(t *testing.T) {
 	}
 
 	s3 := newJWTDataStore(path, "my-secure-passphrase", "invalid-client-id")
-	_, err = s3.Load()
+	got, err = s3.Load()
 	if !errors.Is(err, ErrInvalidClientID) {
 		t.Fatalf("expected error, got nil")
+	}
+	if got.ClientID != "my-client-id" {
+		t.Fatalf("unexpected client ID: %s", got.ClientID)
 	}
 }
