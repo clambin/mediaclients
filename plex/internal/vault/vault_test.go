@@ -185,7 +185,7 @@ func TestDecrypt(t *testing.T) {
 			} else if !tt.pass && err == nil {
 				t.Fatalf("expected error")
 			}
-			if err == nil && bytes.Compare(got, input) != 0 {
+			if err == nil && !bytes.Equal(got, input) {
 				t.Fatalf("decryptAES() want: %v, got: %v", string(input), string(got))
 			}
 		})

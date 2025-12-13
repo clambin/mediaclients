@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -39,9 +38,9 @@ func TestTokenSource_WithCredentials(t *testing.T) {
 	}
 
 	// clear the cached token
-	ts.(*cachingTokenSource).once = sync.Once{}
+	ts.(*cachingTokenSource).once.done = false
 	// a failed registrar will fail the token source
-	ts.(*cachingTokenSource).authTokenSource = fakeRegistrar{err: errors.New("test error")}
+	ts.(*cachingTokenSource).tokenSource = fakeRegistrar{err: errors.New("test error")}
 	_, err = ts.Token(t.Context())
 	if err == nil {
 		t.Fatalf("expected error, got nil")
@@ -64,9 +63,9 @@ func TestTokenSource_WithPIN(t *testing.T) {
 	}
 
 	// clear the cached token
-	ts.(*cachingTokenSource).once = sync.Once{}
+	ts.(*cachingTokenSource).once.done = false
 	// a failed registrar will fail the token source
-	ts.(*cachingTokenSource).authTokenSource = fakeRegistrar{err: errors.New("test error")}
+	ts.(*cachingTokenSource).tokenSource = fakeRegistrar{err: errors.New("test error")}
 	_, err = ts.Token(t.Context())
 	if err == nil {
 		t.Fatalf("expected error, got nil")
@@ -99,9 +98,9 @@ func TestTokenSource_WithPMS(t *testing.T) {
 	}
 
 	// clear the cached token
-	ts.(*cachingTokenSource).once = sync.Once{}
+	ts.(*cachingTokenSource).once.done = false
 	// if registering fails, an error is returned
-	ts.(*cachingTokenSource).authTokenSource.(*pmsTokenSource).tokenSource = fakeRegistrar{err: errors.New("test error")}
+	ts.(*cachingTokenSource).tokenSource.(*pmsTokenSource).tokenSource = fakeRegistrar{err: errors.New("test error")}
 	_, err = ts.Token(t.Context())
 	if err == nil {
 		t.Fatalf("expected error, got nil")
@@ -190,7 +189,7 @@ func TestTokenSource_NoRegistrar(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
-	if !errors.Is(err, ErrNoRegistrar) {
+	if !errors.Is(err, ErrNoTokenSource) {
 		t.Fatalf("unexpected error: %v(%T)", err, err)
 	}
 
@@ -199,7 +198,7 @@ func TestTokenSource_NoRegistrar(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
-	if !errors.Is(err, ErrNoRegistrar) {
+	if !errors.Is(err, ErrNoTokenSource) {
 		t.Fatalf("unexpected error: %v(%T)", err, err)
 	}
 }

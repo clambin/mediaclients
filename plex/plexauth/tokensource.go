@@ -6,11 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"sync"
 	"time"
 )
-
-var ErrNoRegistrar = errors.New("legacy token required but no registrar found")
 
 // TokenSourceOption provides the configuration to determine the desired TokenSource.
 type TokenSourceOption func(*tokenSourceConfiguration)
@@ -99,7 +96,7 @@ func (c tokenSourceConfiguration) tokenSource() TokenSource {
 	// cache the registrar: we only need to register once.
 	if !c.usePMSToken {
 		// cache the token. we only register once
-		return &cachingTokenSource{authTokenSource: source}
+		return &cachingTokenSource{tokenSource: source}
 	}
 
 	// If we're using JWT tokens, use jwtTokenSource to register the device (if needed) and obtain a JWT token.
@@ -114,7 +111,7 @@ func (c tokenSourceConfiguration) tokenSource() TokenSource {
 
 	// return the final token source: cachingTokenSource -> pmsTokenSource -> [ jwtTokenSource -> ] registrar
 	return &cachingTokenSource{
-		authTokenSource: &pmsTokenSource{
+		tokenSource: &pmsTokenSource{
 			tokenSource: source,
 			config:      c.config,
 			pmsName:     c.pmsName,
@@ -154,61 +151,31 @@ func (f fixedTokenSource) Token(_ context.Context) (Token, error) {
 
 // A cachingTokenSource caches the token obtained by the underlying TokenSource.
 type cachingTokenSource struct {
-	authTokenSource TokenSource
-	authToken       Token
-	once            sync.Once
+	tokenSource TokenSource
+	token       Token
+	once        onceSuccessful
 }
 
 func (s *cachingTokenSource) Token(ctx context.Context) (Token, error) {
-	if s.authTokenSource == nil {
-		return "", ErrNoRegistrar
+	if s.tokenSource == nil {
+		return "", ErrNoTokenSource
 	}
-	var err error
-	s.once.Do(func() {
-		s.authToken, err = s.authTokenSource.Token(ctx)
+	err := s.once.Do(func() error {
+		var err error
+		s.token, err = s.tokenSource.Token(ctx)
+		return err
 	})
-	return s.authToken, err
-}
-
-// A pmsTokenSource returns the Plex authentication token for a given Plex Media Server.
-type pmsTokenSource struct {
-	tokenSource TokenSource
-	config      *Config
-	pmsName     string
-	logger      *slog.Logger
-}
-
-func (p pmsTokenSource) Token(ctx context.Context) (Token, error) {
-	// get a token to access the Plex Cloud API
-	token, err := p.tokenSource.Token(ctx)
-	if err != nil {
-		return "", fmt.Errorf("token: %w", err)
-	}
-	p.logger.Debug("got cloud token", "jwt", token.IsJWT())
-	var mediaServers []RegisteredDevice
-	if mediaServers, err = p.config.MediaServers(ctx, token); err == nil {
-		for _, server := range mediaServers {
-			p.logger.Debug("media server found", "name", server.Name)
-			if server.Name == p.pmsName || p.pmsName == "" {
-				p.logger.Debug("media server matched")
-				return Token(server.Token), nil
-			}
-		}
-		err = fmt.Errorf("media server %q not found", p.pmsName)
-	}
-	p.logger.Debug("no media server found", "err", err)
-	return "", fmt.Errorf("media servers: %w", err)
+	return s.token, err
 }
 
 // A jwtTokenSource returns a Plex JWT Token. If needed, it registers a new device using the configured registrar.
 type jwtTokenSource struct {
-	registrar   TokenSource
-	vault       secureDataVault
-	logger      *slog.Logger
-	config      *Config
-	secureData  jwtSecureData
-	initialized bool
-	lock        sync.Mutex
+	registrar  TokenSource
+	vault      secureDataVault
+	logger     *slog.Logger
+	config     *Config
+	secureData jwtSecureData
+	once       onceSuccessful
 }
 
 type secureDataVault interface {
@@ -216,14 +183,9 @@ type secureDataVault interface {
 	Save(jwtSecureData) error
 }
 
-func (s *jwtTokenSource) Token(ctx context.Context) (token Token, err error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	if !s.initialized {
-		if err = s.initialize(ctx); err != nil {
-			return token, fmt.Errorf("init: %w", err)
-		}
-		s.initialized = true
+func (s *jwtTokenSource) Token(ctx context.Context) (Token, error) {
+	if err := s.once.Do(func() error { return s.initialize(ctx) }); err != nil {
+		return "", fmt.Errorf("init: %w", err)
 	}
 	return s.config.JWTToken(ctx, s.secureData.PrivateKey, s.secureData.KeyID)
 }
@@ -255,7 +217,7 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 	s.logger.Debug("registering device")
 
 	if s.registrar == nil {
-		return ErrNoRegistrar
+		return ErrNoTokenSource
 	}
 
 	var token Token
@@ -279,4 +241,34 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 
 	s.logger.Debug("token data saved successfully")
 	return nil
+}
+
+// A pmsTokenSource returns the Plex authentication token for a given Plex Media Server.
+type pmsTokenSource struct {
+	tokenSource TokenSource
+	config      *Config
+	logger      *slog.Logger
+	pmsName     string
+}
+
+func (p pmsTokenSource) Token(ctx context.Context) (Token, error) {
+	// get a token to access the Plex Cloud API
+	token, err := p.tokenSource.Token(ctx)
+	if err != nil {
+		return "", fmt.Errorf("token: %w", err)
+	}
+	p.logger.Debug("got cloud token", "jwt", token.IsJWT())
+	var mediaServers []RegisteredDevice
+	if mediaServers, err = p.config.MediaServers(ctx, token); err == nil {
+		for _, server := range mediaServers {
+			p.logger.Debug("media server found", "name", server.Name)
+			if server.Name == p.pmsName || p.pmsName == "" {
+				p.logger.Debug("got media server token")
+				return Token(server.Token), nil
+			}
+		}
+		err = fmt.Errorf("media server %q not found", p.pmsName)
+	}
+	p.logger.Debug("no media server found", "err", err)
+	return "", fmt.Errorf("media servers: %w", err)
 }

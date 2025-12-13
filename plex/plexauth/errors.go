@@ -4,13 +4,21 @@ import (
 	"bytes"
 	"cmp"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 )
 
-var ErrInvalidToken = fmt.Errorf("invalid token")
+var (
+	// ErrInvalidToken indicates that a Config method was passed an invalid token.
+	ErrInvalidToken = fmt.Errorf("invalid token")
+	// ErrNoTokenSource indicates that a token source needs a child token source, but none was provided.
+	// A typical example is JWTTokenSource or PMSTokenSource needing a registrar to get a legacy token,
+	// but none is provided in [Config.TokenSource].
+	ErrNoTokenSource = errors.New("no token source provided")
+)
 
 var _ error = (*HTTPError)(nil)
 
@@ -26,10 +34,13 @@ type HTTPError struct {
 	StatusCode int
 }
 
+// Error returns a string representation of the error, which is "plex: Reason" or "plex: Status".
 func (h *HTTPError) Error() string {
 	return "plex: " + cmp.Or(h.Reason, h.Status)
 }
 
+// ParsePlexError parses an HTTP response from Plex and returns an HTTPError.
+// This may become a non-exported function in the future.
 func ParsePlexError(r *http.Response) error {
 	var (
 		errorBody struct {

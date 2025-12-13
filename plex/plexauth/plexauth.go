@@ -30,10 +30,10 @@ var (
 	DefaultConfig = Config{
 		AuthURL:   "https://plex.tv",
 		AuthV2URL: "https://clients.plex.tv",
-		TokenTTL:  7 * 24 * time.Hour,
 		Scopes:    []string{"username", "email", "friendly_name", "restricted", "anonymous"},
-		aud:       "plex.tv",
 		ClientID:  uuid.New().String(),
+		aud:       "plex.tv",
+		tokenTTL:  7 * 24 * time.Hour,
 	}
 
 	defaultHTTPClient = &http.Client{
@@ -125,11 +125,12 @@ type Config struct {
 	ClientID string
 	aud      string
 	// Scopes is a list of scopes to request.
+	// This may become non-exported in the future.
 	Scopes []string
 	// TokenTTL is the duration of the authentication token.
 	// Defaults to 7 days, in line with Plex specifications.
 	// Normally, this should not need to be changed.
-	TokenTTL time.Duration
+	tokenTTL time.Duration
 }
 
 // WithClientID sets the Client ID.
