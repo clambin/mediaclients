@@ -225,10 +225,7 @@ func (s *jwtTokenSource) Token(ctx context.Context) (token Token, err error) {
 		}
 		s.initialized = true
 	}
-	if token, err = s.config.JWTToken(ctx, s.secureData.PrivateKey, s.secureData.KeyID); err == nil {
-		s.logger.Debug("got JWT token")
-	}
-	return token, err
+	return s.config.JWTToken(ctx, s.secureData.PrivateKey, s.secureData.KeyID)
 }
 
 func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
