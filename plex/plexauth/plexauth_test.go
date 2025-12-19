@@ -230,6 +230,47 @@ func TestConfig_RegisteredDevices_And_MediaServers(t *testing.T) {
 	}
 }
 
+func TestConfig_BadData(t *testing.T) {
+	cfg, ts := newTestServer(baseConfig)
+	ts.Close()
+	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("bad data"))
+	}))
+	cfg.AuthURL = ts.URL
+	cfg.AuthV2URL = ts.URL
+	ctx := t.Context()
+	if _, err := cfg.RegisterWithCredentials(ctx, "user", "pass"); err == nil {
+		t.Fatalf("expected error from bad data")
+	}
+	if _, err := cfg.RegisterWithPIN(ctx, func(PINResponse, string) {}, 10*time.Millisecond); err == nil {
+		t.Fatalf("expected error from bad data")
+	}
+	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, legacyToken)
+	if err == nil {
+		t.Fatalf("expected error from bad data")
+	}
+	if _, err = cfg.JWTToken(ctx, privateKey, keyID); err == nil {
+		t.Fatalf("expected error from bad data")
+	}
+	if _, err = cfg.RegisteredDevices(ctx, legacyToken); err == nil {
+		t.Fatalf("expected error from bad data")
+	}
+}
+
+func TestConfig_BadToken(t *testing.T) {
+	cfg, ts := newTestServer(baseConfig)
+	t.Cleanup(ts.Close)
+	ctx := t.Context()
+
+	if _, _, err := cfg.GenerateAndUploadPublicKey(ctx, ""); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("expected ErrInvalidToken from empty token, got: %v", err)
+	}
+	if _, err := cfg.RegisteredDevices(ctx, ""); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("expected ErrInvalidToken from empty token, got: %v", err)
+	}
+}
+
 var _ http.Handler = &fakeServer{}
 
 type fakeServer struct {

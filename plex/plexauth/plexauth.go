@@ -362,9 +362,7 @@ func (c Config) JWTToken(ctx context.Context, privateKey ed25519.PrivateKey, key
 	_ = tok.Set("aud", c.aud)
 	_ = tok.Set("iss", c.ClientID)
 	headers := jws.NewHeaders()
-	if err = headers.Set(jws.KeyIDKey, keyID); err != nil {
-		return "", fmt.Errorf("set kid: %w", err)
-	}
+	_ = headers.Set(jws.KeyIDKey, keyID)
 	signed, err := jwt.Sign(tok,
 		jwt.WithKey(
 			jwa.EdDSA(),
