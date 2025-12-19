@@ -10,6 +10,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"iter"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -61,6 +62,11 @@ func httpClient(ctx context.Context) *http.Client {
 
 // Device identifies the client when using Plex username/password credentials.
 // Although this package provides a default, it is recommended to set this yourself.
+//
+// Limitation: currently the Device attributes are only registered when the device is registered
+// (during [Config.RegisterWithCredentials] or [Config.RegisterWithPIN]).  If the attributes change
+// after registration (e.g., the Version is updated), this is not (yet) reflected in the registered
+// device on plex.tv.
 type Device struct {
 	// Product is the name of the client product.
 	// Passed as X-Plex-Product header.
@@ -77,22 +83,45 @@ type Device struct {
 	// Passed as X-Plex-Platform-Version header.
 	PlatformVersion string
 	// Device is a relatively friendly name for the client device.
-	// Passed as X-Plex-ClientDevice header.
+	// Passed as X-Plex-Device header.
 	// In Authorized Devices, it is shown on line 4.
 	Device string
 	// Model is a potentially less friendly identifier for the device model.
 	// Passed as X-Plex-Model header.
 	Model string
 	// DeviceVendor is the name of the device vendor.
-	// Passed as X-Plex-ClientDevice-Vendor header.
+	// Passed as X-Plex-Device-Vendor header.
 	DeviceVendor string
 	// DeviceName is a friendly name for the client.
-	// Passed as X-Plex-ClientDevice-Name header.
+	// Passed as X-Plex-Device-Name header.
 	// In Authorized Devices, it is shown on line 1.
 	DeviceName string
+	// Provides describes the type of device.
+	// Passed as X-Plex-Provides header.
+	Provides string
 }
 
+// populateRequest populates the request headers with the device information.
 func (id Device) populateRequest(req *http.Request) {
+	for key, value := range id.values() {
+		if value != "" {
+			req.Header.Set(key, value)
+		}
+	}
+}
+
+// Query returns the device information as url.Values, suitable for use in a URL query.
+//
+// TODO: exported for now for debugging purpose, but will be unexported for GA.
+func (id Device) Query() url.Values {
+	v := make(url.Values)
+	for key, value := range id.values() {
+		v.Add(key, value)
+	}
+	return v
+}
+
+func (id Device) values() iter.Seq2[string, string] {
 	headers := map[string]string{
 		"X-Plex-Product":          id.Product,
 		"X-Plex-Version":          id.Version,
@@ -102,10 +131,15 @@ func (id Device) populateRequest(req *http.Request) {
 		"X-Plex-Device-Vendor":    id.DeviceVendor,
 		"X-Plex-Device-Name":      id.DeviceName,
 		"X-Plex-Model":            id.Model,
+		"X-Plex-Provides":         id.Provides,
 	}
-	for key, value := range headers {
-		if value != "" {
-			req.Header.Set(key, value)
+	return func(yield func(string, string) bool) {
+		for key, value := range headers {
+			if value != "" {
+				if !yield(key, value) {
+					return
+				}
+			}
 		}
 	}
 }
@@ -140,7 +174,13 @@ func (c Config) WithClientID(clientID string) Config {
 }
 
 // WithDevice sets the device information used during username/password and pin authentication.
+//
 // See the [Device] type for details on what each field means.
+//
+// Limitation: currently the Device attributes are only registered when the device is registered
+// // (during [Config.RegisterWithCredentials] or [Config.RegisterWithPIN]).  If the attributes change
+// // after registration (e.g., the Version is updated), this is not (yet) reflected in the registered
+// // device on plex.tv.
 func (c Config) WithDevice(device Device) Config {
 	c.Device = device
 	return c
@@ -343,7 +383,7 @@ func (c Config) JWTToken(ctx context.Context, privateKey ed25519.PrivateKey, key
 func (c Config) nonce(ctx context.Context) (string, error) {
 	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/api/v2/auth/nonce", nil, http.StatusOK)
 	if err != nil {
-		return "", fmt.Errorf("nonce: %w", err)
+		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -433,7 +473,12 @@ func (c Config) TokenSource(opts ...TokenSourceOption) TokenSource {
 type requestFormatter func(*http.Request)
 
 // do builds a new HTTP request and sends it to the destination URL.
+// note: url cannot include query parameters
 func (c Config) do(ctx context.Context, method string, url string, body io.Reader, wantStatusCode int, formatters ...requestFormatter) (*http.Response, error) {
+	if q := c.Device.Query(); len(q) > 0 {
+		q.Set("X-Plex-Client-Identifier", c.ClientID)
+		url += "?" + q.Encode()
+	}
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
@@ -442,6 +487,7 @@ func (c Config) do(ctx context.Context, method string, url string, body io.Reade
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Accept-Language", "en-US")
 	req.Header.Set("X-Plex-Client-Identifier", c.ClientID)
+	c.Device.populateRequest(req)
 	for _, formatter := range formatters {
 		formatter(req)
 	}

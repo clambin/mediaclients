@@ -153,14 +153,14 @@ func (f fixedTokenSource) Token(_ context.Context) (Token, error) {
 type cachingTokenSource struct {
 	tokenSource TokenSource
 	token       Token
-	once        onceSuccessful
+	init        untilSuccessful
 }
 
 func (s *cachingTokenSource) Token(ctx context.Context) (Token, error) {
 	if s.tokenSource == nil {
 		return "", ErrNoTokenSource
 	}
-	err := s.once.Do(func() error {
+	err := s.init.Do(func() error {
 		var err error
 		s.token, err = s.tokenSource.Token(ctx)
 		return err
@@ -175,7 +175,7 @@ type jwtTokenSource struct {
 	logger     *slog.Logger
 	config     *Config
 	secureData jwtSecureData
-	once       onceSuccessful
+	init       untilSuccessful
 }
 
 type secureDataVault interface {
@@ -184,7 +184,7 @@ type secureDataVault interface {
 }
 
 func (s *jwtTokenSource) Token(ctx context.Context) (Token, error) {
-	if err := s.once.Do(func() error { return s.initialize(ctx) }); err != nil {
+	if err := s.init.Do(func() error { return s.initialize(ctx) }); err != nil {
 		return "", fmt.Errorf("init: %w", err)
 	}
 	return s.config.JWTToken(ctx, s.secureData.PrivateKey, s.secureData.KeyID)

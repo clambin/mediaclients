@@ -2,6 +2,8 @@ package plexauth
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -16,7 +18,7 @@ func TestParsePlexError(t *testing.T) {
 		wantErrStr string
 	}{
 		{
-			name: "json body parsed",
+			name: "single error",
 			resp: &http.Response{
 				Status:     "400 Bad Request",
 				StatusCode: http.StatusBadRequest,
@@ -25,13 +27,22 @@ func TestParsePlexError(t *testing.T) {
 			wantErrStr: "plex: invalid input",
 		},
 		{
-			name: "auth - json body parsed",
+			name: "multi error w/ 1 error",
 			resp: &http.Response{
 				Status:     "401 Unauthorized",
 				StatusCode: http.StatusUnauthorized,
 				Body:       io.NopCloser(bytes.NewBufferString(`{"errors": [ {"code":1001, "message": "invalid user"} ] }`)),
 			},
 			wantErrStr: "plex: 1001 - invalid user",
+		},
+		{
+			name: "multi error w/ multiple errors",
+			resp: &http.Response{
+				Status:     "401 Unauthorized",
+				StatusCode: http.StatusUnauthorized,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"errors": [ {"code":1001, "message": "invalid user"}, {"code":-1, "message": "I just don't feel like it"} ] }`)),
+			},
+			wantErrStr: "plex: 1001 - invalid user\n-1 - I just don't feel like it",
 		},
 		{
 			name: "non-json body ignored",
@@ -56,5 +67,26 @@ func TestParsePlexError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.EqualError(t, ParsePlexError(tt.resp), tt.wantErrStr)
 		})
+	}
+}
+
+func TestPlexError_Unwrap(t *testing.T) {
+	r := http.Response{
+		StatusCode: http.StatusTooManyRequests,
+		Status:     http.StatusText(http.StatusTooManyRequests),
+		Body:       io.NopCloser(bytes.NewBufferString(`{"errors": [ {"code":1003, "message": "too many requests"} ] }`)),
+	}
+	err := ParsePlexError(&r)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var err2 *PlexError
+	if !errors.As(err, &err2) {
+		t.Fatal("expected *PlexError")
+	}
+	fmt.Printf("%T\n", err2.Error())
+
+	if !errors.Is(err, ErrTooManyRequests) {
+		t.Fatal("expected error")
 	}
 }

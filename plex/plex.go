@@ -17,9 +17,16 @@ func WithHTTPClient(httpClient *http.Client) Option {
 	}
 }
 
+func WithDevice(device plexauth.Device) Option {
+	return func(client *Client) {
+		client.device = &device
+	}
+}
+
 // Client calls the Plex API
 type Client struct {
 	httpClient  *http.Client
+	device      *plexauth.Device
 	tokenSource plexauth.TokenSource
 	url         string
 }
@@ -49,9 +56,17 @@ func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
 		return response.MediaContainer, fmt.Errorf("plex auth: %w", err)
 	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.url+endpoint, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("X-Plex-Token", token.String())
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Plex-Token", token.String())
+
+	if c.device != nil {
+		for k, v := range c.device.Query() {
+			for _, v1 := range v {
+				req.Header.Add(k, v1)
+			}
+		}
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

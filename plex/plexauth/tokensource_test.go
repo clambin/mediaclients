@@ -38,7 +38,7 @@ func TestTokenSource_WithCredentials(t *testing.T) {
 	}
 
 	// clear the cached token
-	ts.(*cachingTokenSource).once.done = false
+	ts.(*cachingTokenSource).init.done.Store(false)
 	// a failed registrar will fail the token source
 	ts.(*cachingTokenSource).tokenSource = fakeRegistrar{err: errors.New("test error")}
 	_, err = ts.Token(t.Context())
@@ -63,7 +63,7 @@ func TestTokenSource_WithPIN(t *testing.T) {
 	}
 
 	// clear the cached token
-	ts.(*cachingTokenSource).once.done = false
+	ts.(*cachingTokenSource).init.done.Store(false)
 	// a failed registrar will fail the token source
 	ts.(*cachingTokenSource).tokenSource = fakeRegistrar{err: errors.New("test error")}
 	_, err = ts.Token(t.Context())
@@ -98,7 +98,7 @@ func TestTokenSource_WithPMS(t *testing.T) {
 	}
 
 	// clear the cached token
-	ts.(*cachingTokenSource).once.done = false
+	ts.(*cachingTokenSource).init.done.Store(false)
 	// if registering fails, an error is returned
 	ts.(*cachingTokenSource).tokenSource.(*pmsTokenSource).tokenSource = fakeRegistrar{err: errors.New("test error")}
 	_, err = ts.Token(t.Context())
