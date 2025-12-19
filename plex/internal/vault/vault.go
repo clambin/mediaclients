@@ -58,7 +58,7 @@ func New[T any](filePath string, passphrase string) *Vault[T] {
 }
 
 func (c *Vault[T]) Load() (T, error) {
-	var zero T
+	var v T
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -70,17 +70,17 @@ func (c *Vault[T]) Load() (T, error) {
 	// read the file
 	data, err := os.ReadFile(c.filePath)
 	if err != nil {
-		return zero, err
+		return v, err
 	}
 
 	// determine file version
 	var versionReq map[string]any
 	if err = json.Unmarshal(data, &versionReq); err != nil {
-		return zero, fmt.Errorf("unrecognized file format: %w", err)
+		return v, fmt.Errorf("unrecognized file format: %w", err)
 	}
 	version, ok := versionReq["version"].(float64)
 	if !ok {
-		return zero, fmt.Errorf("unrecognized file format: missing version")
+		return v, fmt.Errorf("unrecognized file format: missing version")
 	}
 	// decode the file based on the version
 	var record content
@@ -89,23 +89,22 @@ func (c *Vault[T]) Load() (T, error) {
 		// we already know the content is decodable
 		_ = json.Unmarshal(data, &record)
 	default:
-		return zero, fmt.Errorf("unsupported version %d", int(version))
+		return v, fmt.Errorf("unsupported version %d", int(version))
 	}
 
 	// decrypt the data
 	encryptionKey, _ := deriveEncryptionKey(c.passphrase, record.Salt)
 	clearData, err := decryptAES(record.Data, encryptionKey)
 	if err != nil {
-		return zero, &ErrDecryptionFailed{Err: err}
+		return v, &ErrDecryptionFailed{Err: err}
 	}
 
 	// decode the data
-	var t T
-	if err = json.Unmarshal(clearData, &t); err != nil {
-		return zero, fmt.Errorf("decode data: %w", err)
+	if err = json.Unmarshal(clearData, &v); err != nil {
+		return v, fmt.Errorf("decode data: %w", err)
 	}
-	c.content = &t
-	return t, nil
+	c.content = &v
+	return v, nil
 }
 
 func (c *Vault[T]) Save(v T) error {

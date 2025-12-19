@@ -45,5 +45,11 @@ func makeClientAndServer(h http.Handler) (*plex.Client, *httptest.Server) {
 		h = &testutil.TestServer
 	}
 	server := httptest.NewServer(h)
-	return plex.New(server.URL, plexauth.DefaultConfig.TokenSource(plexauth.WithToken("some-token")), plex.WithHTTPClient(&http.Client{})), server
+	client := plex.New(
+		server.URL,
+		plexauth.DefaultConfig.TokenSource(plexauth.WithToken("some-token")),
+		plex.WithHTTPClient(&http.Client{}),
+		plex.WithDevice(plexauth.Device{Product: "test"}),
+	)
+	return client, server
 }

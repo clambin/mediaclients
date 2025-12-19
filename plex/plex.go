@@ -56,7 +56,7 @@ func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
 		return response.MediaContainer, fmt.Errorf("plex auth: %w", err)
 	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.url+endpoint, nil)
-	req.Header.Set("Content-Type", "application/json")
+	//req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("X-Plex-Token", token.String())
 

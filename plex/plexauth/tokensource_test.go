@@ -106,6 +106,12 @@ func TestTokenSource_WithPMS(t *testing.T) {
 		t.Fatalf("expected error, got nil")
 	}
 
+	// invalid server
+	ts = cfg.TokenSource(WithCredentials("user", "pass"), WithPMS("invalid pms sever"))
+	_, err = ts.Token(t.Context())
+	if err == nil {
+		t.Fatal("expected error")
+	}
 }
 
 func TestTokenSource_WithJWT(t *testing.T) {
@@ -118,7 +124,7 @@ func TestTokenSource_WithJWT(t *testing.T) {
 		WithCredentials("user", "pass"),
 		WithPMS("srv2"),
 		WithJWT(filepath.Join(t.TempDir(), "vault.enc"), "my-passphrase"),
-		WithLogger(slog.New(slog.DiscardHandler)), // slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))),
+		//WithLogger(slog.New(slog.DiscardHandler)), // slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))),
 	)
 	token, err := ts.Token(t.Context())
 	if err != nil {
