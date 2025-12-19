@@ -27,8 +27,12 @@ func TestUntilSuccessful(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
+	wg.Add(iterations)
 	for range iterations {
-		wg.Go(func() { _ = once.Do(f) })
+		go func() {
+			defer wg.Done()
+			_ = once.Do(f)
+		}()
 	}
 	wg.Wait()
 	if calls := c.Load(); calls != successfulCall {
