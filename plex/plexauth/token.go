@@ -7,6 +7,8 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
+// Token represents a Plex authentication token. It can be either a legacy token (20-character string) or a JWT.
+// Note: JWTs currently cannot be used to access Plex Media Servers.
 type Token string
 
 // String returns the token as a string.

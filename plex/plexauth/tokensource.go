@@ -252,12 +252,12 @@ type pmsTokenSource struct {
 }
 
 func (p pmsTokenSource) Token(ctx context.Context) (Token, error) {
-	// get a token to access the Plex Cloud API
+	// get a token to access the plex.tv API
 	token, err := p.tokenSource.Token(ctx)
 	if err != nil {
 		return "", fmt.Errorf("token: %w", err)
 	}
-	p.logger.Debug("got cloud token", "jwt", token.IsJWT())
+	p.logger.Debug("got plex.tv token", "jwt", token.IsJWT())
 	var mediaServers []RegisteredDevice
 	if mediaServers, err = p.config.MediaServers(ctx, token); err == nil {
 		for _, server := range mediaServers {

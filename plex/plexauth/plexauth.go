@@ -331,7 +331,7 @@ func (c Config) UploadPublicKey(ctx context.Context, publicKey ed25519.PublicKey
 	return keyID, nil
 }
 
-// JWTToken is a new authentication mechanism introduced in Plex Cloud, based on JSON Web Tokens (JWT).
+// JWTToken is a new authentication mechanism introduced in plex.tv, based on JSON Web Tokens (JWT).
 //
 // JWTTokens increase security by eliminating the need for a PIN or username/password combination each time
 // a client starts. As setting up JWT requires a valid token, a client only needs to register once.
@@ -341,13 +341,13 @@ func (c Config) UploadPublicKey(ctx context.Context, publicKey ed25519.PublicKey
 // The client can then use the private key and the public key's ID to generate a new JWTToken.
 //
 // This does require persistence, as the Client ID, private key, and public key ID must be kept in sync
-// with Plex Cloud: once a JWTToken has been requested for the ClientID, further requests to re-register that ClientID
+// with plex.tv: once a JWTToken has been requested for the ClientID, further requests to re-register that ClientID
 // ([Config.RegisterWithCredentials]/[Config.RegisterWithPIN]) will fail. You will need to generate a new ClientID
 // and re-register.
 //
 // JWTTokens are valid for 7 days.
 //
-// Note: a JWTToken can only be used to access the Plex Cloud API; it cannot be used to access Plex Media Servers.
+// Note: a JWTToken can only be used to access the plex.tv API; it cannot be used to access Plex Media Servers.
 // Instead, you can use a JWTToken to look up a Plex Media Server (PMS) (using devices.xml)
 // to find the PMS's Access Token.
 func (c Config) JWTToken(ctx context.Context, privateKey ed25519.PrivateKey, keyID string) (Token, error) {
