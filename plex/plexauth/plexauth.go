@@ -29,12 +29,12 @@ import (
 var (
 	// DefaultConfig contains the default configuration required to authenticate with Plex.
 	DefaultConfig = Config{
-		AuthURL:   "https://plex.tv",
-		AuthV2URL: "https://clients.plex.tv",
-		Scopes:    []string{"username", "email", "friendly_name", "restricted", "anonymous"},
-		ClientID:  uuid.New().String(),
-		aud:       "plex.tv",
-		tokenTTL:  7 * 24 * time.Hour,
+		URL:      "https://plex.tv",
+		V2URL:    "https://clients.plex.tv",
+		Scopes:   []string{"username", "email", "friendly_name", "restricted", "anonymous"},
+		ClientID: uuid.New().String(),
+		aud:      "plex.tv",
+		tokenTTL: 7 * 24 * time.Hour,
 	}
 
 	defaultHTTPClient = &http.Client{
@@ -148,13 +148,13 @@ func (id Device) values() iter.Seq2[string, string] {
 type Config struct {
 	// Device information used during username/password authentication.
 	Device Device
-	// AuthURL is the base URL of the legacy Plex authentication endpoint.
+	// URL is the base URL of the legacy Plex authentication endpoint.
 	// It is used for initial username/password authentication.
 	// This should normally not be changed.
-	AuthURL string
-	// AuthV2URL is the base URL of the new Plex authentication endpoint.
+	URL string
+	// V2URL is the base URL of the new Plex authentication endpoint.
 	// This should normally not be changed.
-	AuthV2URL string
+	V2URL string
 	// ClientID is the unique identifier of the client application.
 	ClientID string
 	aud      string
@@ -194,7 +194,7 @@ func (c Config) RegisterWithCredentials(ctx context.Context, username, password 
 	v.Set("user[password]", password)
 
 	// call the auth endpoint
-	resp, err := c.do(ctx, http.MethodPost, c.AuthURL+"/users/sign_in.xml", strings.NewReader(v.Encode()), http.StatusCreated, func(req *http.Request) {
+	resp, err := c.do(ctx, http.MethodPost, c.URL+"/users/sign_in.xml", strings.NewReader(v.Encode()), http.StatusCreated, func(req *http.Request) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Accept", "application/xml")
 		c.Device.populateRequest(req)
@@ -241,7 +241,7 @@ func (c Config) RegisterWithPIN(ctx context.Context, callback func(PINResponse, 
 // Currently only supports strong=false. Support for strong=true is planned, but this requires https://app.plex.tv/auth,
 // which is currently broken.
 func (c Config) PINRequest(ctx context.Context) (PINResponse, string, error) {
-	resp, err := c.do(ctx, http.MethodPost, c.AuthV2URL+"/api/v2/pins" /*?strong=false"*/, nil, http.StatusCreated, func(req *http.Request) {
+	resp, err := c.do(ctx, http.MethodPost, c.V2URL+"/api/v2/pins" /*?strong=false"*/, nil, http.StatusCreated, func(req *http.Request) {
 		c.Device.populateRequest(req)
 	})
 	if err != nil {
@@ -259,7 +259,7 @@ func (c Config) PINRequest(ctx context.Context) (PINResponse, string, error) {
 // ValidatePIN checks if the user has confirmed the PINRequest.  It returns the full Plex response.
 // When the user has confirmed the PINRequest, the AuthToken field will be populated.
 func (c Config) ValidatePIN(ctx context.Context, id int) (Token, ValidatePINResponse, error) {
-	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/api/v2/pins/"+strconv.Itoa(id), nil, http.StatusOK, func(req *http.Request) {
+	resp, err := c.do(ctx, http.MethodGet, c.V2URL+"/api/v2/pins/"+strconv.Itoa(id), nil, http.StatusOK, func(req *http.Request) {
 		// this is only needed once we start using the new response url (https://app.plex.tv/auth),
 		// but leaving it here for now, as it doesn't do any harm.
 		c.Device.populateRequest(req)
@@ -321,7 +321,7 @@ func (c Config) UploadPublicKey(ctx context.Context, publicKey ed25519.PublicKey
 	jwkBody, _ := json.Marshal(map[string]any{"jwk": jwKey})
 
 	// upload the key to the Plex server
-	resp, err := c.do(ctx, http.MethodPost, c.AuthV2URL+"/api/v2/auth/jwk", bytes.NewReader(jwkBody), http.StatusCreated, func(req *http.Request) {
+	resp, err := c.do(ctx, http.MethodPost, c.V2URL+"/api/v2/auth/jwk", bytes.NewReader(jwkBody), http.StatusCreated, func(req *http.Request) {
 		req.Header.Set("X-Plex-Token", token.String())
 	})
 	if err != nil {
@@ -379,7 +379,7 @@ func (c Config) JWTToken(ctx context.Context, privateKey ed25519.PrivateKey, key
 }
 
 func (c Config) nonce(ctx context.Context) (string, error) {
-	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/api/v2/auth/nonce", nil, http.StatusOK)
+	resp, err := c.do(ctx, http.MethodGet, c.V2URL+"/api/v2/auth/nonce", nil, http.StatusOK)
 	if err != nil {
 		return "", err
 	}
@@ -398,7 +398,7 @@ func (c Config) jwtToken(ctx context.Context, signedJWToken string) (Token, erro
 	// send the signed token to the auth endpoint
 	var body bytes.Buffer
 	_ = json.NewEncoder(&body).Encode(map[string]string{"jwt": signedJWToken})
-	resp, err := c.do(ctx, http.MethodPost, c.AuthV2URL+"/api/v2/auth/token", &body, http.StatusOK)
+	resp, err := c.do(ctx, http.MethodPost, c.V2URL+"/api/v2/auth/token", &body, http.StatusOK)
 	if err != nil {
 		return "", err
 	}
@@ -415,11 +415,12 @@ func (c Config) jwtToken(ctx context.Context, signedJWToken string) (Token, erro
 }
 
 // RegisteredDevices returns all devices registered under the provided token
+// TODO: this isn't an auth function: move this to a PlexTV client
 func (c Config) RegisteredDevices(ctx context.Context, token Token) ([]RegisteredDevice, error) {
 	if !token.IsValid() {
 		return nil, ErrInvalidToken
 	}
-	resp, err := c.do(ctx, http.MethodGet, c.AuthV2URL+"/devices.xml", nil, http.StatusOK, func(req *http.Request) {
+	resp, err := c.do(ctx, http.MethodGet, c.V2URL+"/devices.xml", nil, http.StatusOK, func(req *http.Request) {
 		req.Header.Set("Accept", "application/xml")
 		req.Header.Set("X-Plex-Token", token.String())
 	})
@@ -440,6 +441,7 @@ func (c Config) RegisteredDevices(ctx context.Context, token Token) ([]Registere
 }
 
 // MediaServers returns all Plex Media Servers registered under the provided token
+// TODO: this isn't an auth function: move this to a PlexTV client
 func (c Config) MediaServers(ctx context.Context, token Token) ([]RegisteredDevice, error) {
 	if !token.IsValid() {
 		return nil, ErrInvalidToken
@@ -473,10 +475,10 @@ type requestFormatter func(*http.Request)
 // do builds a new HTTP request and sends it to the destination URL.
 // note: url cannot include query parameters
 func (c Config) do(ctx context.Context, method string, url string, body io.Reader, wantStatusCode int, formatters ...requestFormatter) (*http.Response, error) {
-	if q := c.Device.Query(); len(q) > 0 {
-		q.Set("X-Plex-Client-Identifier", c.ClientID)
-		url += "?" + q.Encode()
-	}
+	//	if q := c.Device.Query(); len(q) > 0 {
+	//		q.Set("X-Plex-Client-Identifier", c.ClientID)
+	//		url += "?" + q.Encode()
+	//	}
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)

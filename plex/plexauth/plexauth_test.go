@@ -210,8 +210,8 @@ func TestConfig_BadData(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("bad data"))
 	}))
-	cfg.AuthURL = ts.URL
-	cfg.AuthV2URL = ts.URL
+	cfg.URL = ts.URL
+	cfg.V2URL = ts.URL
 	ctx := t.Context()
 	if _, err := cfg.RegisterWithCredentials(ctx, "user", "pass"); err == nil {
 		t.Fatalf("expected error from bad data")

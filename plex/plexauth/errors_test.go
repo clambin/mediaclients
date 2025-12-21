@@ -27,22 +27,22 @@ func TestParsePlexError(t *testing.T) {
 			wantErrStr: "plex: invalid input",
 		},
 		{
-			name: "multi error w/ 1 error",
+			name: "multi error with 1 error",
 			resp: &http.Response{
 				Status:     "401 Unauthorized",
 				StatusCode: http.StatusUnauthorized,
 				Body:       io.NopCloser(bytes.NewBufferString(`{"errors": [ {"code":1001, "message": "invalid user"} ] }`)),
 			},
-			wantErrStr: "plex: 1001 - invalid user",
+			wantErrStr: "plex: user could not be authenticated",
 		},
 		{
-			name: "multi error w/ multiple errors",
+			name: "multi error with multiple errors",
 			resp: &http.Response{
 				Status:     "401 Unauthorized",
 				StatusCode: http.StatusUnauthorized,
 				Body:       io.NopCloser(bytes.NewBufferString(`{"errors": [ {"code":1001, "message": "invalid user"}, {"code":-1, "message": "I just don't feel like it"} ] }`)),
 			},
-			wantErrStr: "plex: 1001 - invalid user\n-1 - I just don't feel like it",
+			wantErrStr: "plex: user could not be authenticated\n-1 - I just don't feel like it",
 		},
 		{
 			name: "non-json body ignored",

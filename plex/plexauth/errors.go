@@ -16,6 +16,7 @@ var (
 	// A typical example is JWTTokenSource or PMSTokenSource needing a registrar to get a legacy token,
 	// but none is provided in [Config.TokenSource].
 	ErrNoTokenSource   = errors.New("no token source provided")
+	ErrUnauthorized    = errors.New("user could not be authenticated")
 	ErrTooManyRequests = errors.New("too many requests")
 	ErrJWKMissing      = errors.New("jwk missing. no public key to verify jwt request")
 )
@@ -41,8 +42,9 @@ func (p *PlexError) Unwrap() error {
 	return p.errors
 }
 
-// TODO: probably more errors that could help api figure out what's going on
+// TODO: probably more errors that could help users/apps figure out what's going on
 var plexErrors = map[int]error{
+	1001: ErrUnauthorized,
 	1003: ErrTooManyRequests,
 	1097: ErrJWKMissing,
 }

@@ -30,8 +30,8 @@ var baseConfig = DefaultConfig.
 
 func newTestServer(cfg Config) (Config, *httptest.Server) {
 	ts := httptest.NewServer(makeFakeServer(&cfg))
-	cfg.AuthURL = ts.URL
-	cfg.AuthV2URL = ts.URL
+	cfg.URL = ts.URL
+	cfg.V2URL = ts.URL
 	return cfg, ts
 }
 
@@ -185,7 +185,6 @@ func (f fakeServer) handleJWToken(w http.ResponseWriter, r *http.Request) {
 	wantHeaders := map[string]string{
 		"Accept":                   "application/json",
 		"X-Plex-Client-Identifier": f.config.ClientID,
-		"X-Plex-Version":           "1.0",
 	}
 	if err := validateRequest(r, wantHeaders); err != nil {
 		plexError(w, http.StatusBadRequest, err.Error())

@@ -57,6 +57,8 @@ func WithLogger(logger *slog.Logger) TokenSourceOption {
 // right now is that a JWT-enabled TokenSource does not reregister each time it starts.  But it comes with an
 // operational burden (the need for persistent data) and some risk. Approach with caution.
 // See [Config.JWTToken] for more details.
+//
+// TODO: use an interface to a secure vault so users can override it
 func WithJWT(storePath, passphrase string) TokenSourceOption {
 	return func(c *tokenSourceConfiguration) {
 		c.vault = newJWTDataStore(storePath, passphrase, c.config.ClientID)
@@ -66,6 +68,9 @@ func WithJWT(storePath, passphrase string) TokenSourceOption {
 // WithPMS specifies the name of the Plex Media Server for which to obtain a token.
 // If not specified, the first Plex Media Server found in the account will be used. If you have multiple Plex Media Servers,
 // you should specify the name of the one you want to use.
+//
+// TODO: this isn't an auth function. auth should just return a PlexTV token (legacy or JWT).
+// Move this to a PlexTV client.
 func WithPMS(pmsName string) TokenSourceOption {
 	return func(c *tokenSourceConfiguration) {
 		c.pmsName = pmsName
