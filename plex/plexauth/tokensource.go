@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -129,25 +130,31 @@ func (f fixedTokenSource) Token(_ context.Context) (Token, error) {
 }
 
 // A cachingTokenSource caches the token obtained by the underlying TokenSource.
-// TODO: Plex JWT's expire after 7 days. so it should only be returned to the caller if it's valid.
-// Otherwise, obtain a new token.
 type cachingTokenSource struct {
 	tokenSource TokenSource
-	token       Token
-	init        untilSuccessful
+	token       *Token
+	lock        sync.Mutex
 }
 
 func (s *cachingTokenSource) Token(ctx context.Context) (Token, error) {
 	if s.tokenSource == nil {
 		return "", ErrNoTokenSource
 	}
-	err := s.init.Do(func() error {
-		var err error
-		s.token, err = s.tokenSource.Token(ctx)
-		return err
-	})
-	// TODO: jwt tokens expire after 7 days. so need to be renewed here.
-	return s.token, err
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	// if we have a valid token cached, return it
+	if s.token != nil && s.token.IsValid() {
+		return *s.token, nil
+	}
+
+	// no valid token cached, get a new one
+	token, err := s.tokenSource.Token(ctx)
+	if err != nil {
+		return "", err
+	}
+	s.token = &token
+	return token, nil
 }
 
 // A jwtTokenSource returns a Plex JWT Token. If needed, it registers a new device using the configured registrar.
@@ -224,36 +231,3 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 	s.logger.Debug("token data saved successfully")
 	return nil
 }
-
-/*
-
-// A pmsTokenSource returns the Plex authentication token for a given Plex Media Server.
-type pmsTokenSource struct {
-	tokenSource tokenSource
-	config      *Config
-	logger      *slog.Logger
-	pmsName     string
-}
-
-func (p pmsTokenSource) Token(ctx context.Context) (Token, error) {
-	// get a token to access the plex.tv API
-	token, err := p.tokenSource.Token(ctx)
-	if err != nil {
-		return "", fmt.Errorf("token: %w", err)
-	}
-	p.logger.Debug("got plex.tv token", "jwt", token.IsJWT())
-	var mediaServers []RegisteredDevice
-	if mediaServers, err = p.config.MediaServers(ctx, token); err == nil {
-		for _, server := range mediaServers {
-			p.logger.Debug("media server found", "name", server.Name)
-			if server.Name == p.pmsName || p.pmsName == "" {
-				p.logger.Debug("got media server token")
-				return Token(server.Token), nil
-			}
-		}
-		err = fmt.Errorf("media server %q not found", p.pmsName)
-	}
-	p.logger.Debug("no media server found", "err", err)
-	return "", fmt.Errorf("media servers: %w", err)
-}
-*/
