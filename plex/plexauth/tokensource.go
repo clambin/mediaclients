@@ -65,19 +65,6 @@ func WithJWT(storePath, passphrase string) TokenSourceOption {
 	}
 }
 
-// WithPMS specifies the name of the Plex Media Server for which to obtain a token.
-// If not specified, the first Plex Media Server found in the account will be used. If you have multiple Plex Media Servers,
-// you should specify the name of the one you want to use.
-//
-// TODO: this isn't an auth function. auth should just return a PlexTV token (legacy or JWT).
-// Move this to a PlexTV client.
-func WithPMS(pmsName string) TokenSourceOption {
-	return func(c *tokenSourceConfiguration) {
-		c.pmsName = pmsName
-		c.usePMSToken = true
-	}
-}
-
 type tokenSourceConfiguration struct {
 	config      *Config
 	registrar   TokenSource
@@ -94,15 +81,8 @@ func (c tokenSourceConfiguration) tokenSource() TokenSource {
 		return fixedTokenSource{token: c.token}
 	}
 
-	// the registrar is the basis of every TokenSource.
+	// the registrar is the basis of every tokenSource.
 	source := c.registrar
-
-	// If we're not using the Plex Media Server token, we're done.
-	// cache the registrar: we only need to register once.
-	if !c.usePMSToken {
-		// cache the token. we only register once
-		return &cachingTokenSource{tokenSource: source}
-	}
 
 	// If we're using JWT tokens, use jwtTokenSource to register the device (if needed) and obtain a JWT token.
 	if c.vault != nil {
@@ -114,14 +94,9 @@ func (c tokenSourceConfiguration) tokenSource() TokenSource {
 		}
 	}
 
-	// return the final token source: cachingTokenSource -> pmsTokenSource -> [ jwtTokenSource -> ] registrar
+	// return the final token source: cachingTokenSource -> [ jwtTokenSource -> ] registrar
 	return &cachingTokenSource{
-		tokenSource: &pmsTokenSource{
-			tokenSource: source,
-			config:      c.config,
-			pmsName:     c.pmsName,
-			logger:      c.logger.With("component", "pmsTokenSource"),
-		},
+		tokenSource: source,
 	}
 }
 
@@ -142,7 +117,6 @@ func (a tokenSourceFunc) Token(ctx context.Context) (Token, error) {
 var (
 	_ TokenSource = fixedTokenSource{}
 	_ TokenSource = (*cachingTokenSource)(nil)
-	_ TokenSource = (*pmsTokenSource)(nil)
 )
 
 // fixedTokenSource returns a fixed token.
@@ -155,6 +129,8 @@ func (f fixedTokenSource) Token(_ context.Context) (Token, error) {
 }
 
 // A cachingTokenSource caches the token obtained by the underlying TokenSource.
+// TODO: Plex JWT's expire after 7 days. so it should only be returned to the caller if it's valid.
+// Otherwise, obtain a new token.
 type cachingTokenSource struct {
 	tokenSource TokenSource
 	token       Token
@@ -170,6 +146,7 @@ func (s *cachingTokenSource) Token(ctx context.Context) (Token, error) {
 		s.token, err = s.tokenSource.Token(ctx)
 		return err
 	})
+	// TODO: jwt tokens expire after 7 days. so need to be renewed here.
 	return s.token, err
 }
 
@@ -248,9 +225,11 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 	return nil
 }
 
+/*
+
 // A pmsTokenSource returns the Plex authentication token for a given Plex Media Server.
 type pmsTokenSource struct {
-	tokenSource TokenSource
+	tokenSource tokenSource
 	config      *Config
 	logger      *slog.Logger
 	pmsName     string
@@ -277,3 +256,4 @@ func (p pmsTokenSource) Token(ctx context.Context) (Token, error) {
 	p.logger.Debug("no media server found", "err", err)
 	return "", fmt.Errorf("media servers: %w", err)
 }
+*/

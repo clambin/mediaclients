@@ -1,8 +1,6 @@
 package plexauth
 
 import (
-	"encoding/xml"
-	"strconv"
 	"time"
 )
 
@@ -61,53 +59,4 @@ type ValidatePINResponse struct {
 	Id        int  `json:"id"`
 	ExpiresIn int  `json:"expiresIn"`
 	Trusted   bool `json:"trusted"`
-}
-
-// RegisteredDevice represents a registered device on Plex.
-type RegisteredDevice struct {
-	CreatedAt  PlexTimestamp `xml:"createdAt,attr"`
-	LastSeenAt PlexTimestamp `xml:"lastSeenAt,attr"`
-	SyncList   *SyncList     `xml:"SyncList"`
-	// Attributes
-	Name            string `xml:"name,attr"`
-	PublicAddress   string `xml:"publicAddress,attr"`
-	Product         string `xml:"product,attr"`
-	ProductVersion  string `xml:"productVersion,attr"`
-	Platform        string `xml:"platform,attr"`
-	PlatformVersion string `xml:"platformVersion,attr"`
-	Device          string `xml:"device,attr"`
-	Model           string `xml:"model,attr"`
-	Vendor          string `xml:"vendor,attr"`
-	Provides        string `xml:"provides,attr"`
-	ClientID        string `xml:"clientIdentifier,attr"`
-	Version         string `xml:"version,attr"`
-	ID              string `xml:"id,attr"`
-	Token           string `xml:"token,attr"`
-	ScreenRes       string `xml:"screenResolution,attr"`
-	ScreenDensity   string `xml:"screenDensity,attr"`
-
-	// Optional nested elements
-	Connections []Connection `xml:"Connection"`
-}
-
-type Connection struct {
-	URI string `xml:"uri,attr"`
-}
-
-type SyncList struct {
-	ItemsComplete int `xml:"itemsCompleteCount,attr"`
-	TotalSize     int `xml:"totalSize,attr"`
-	Version       int `xml:"version,attr"`
-}
-
-// PlexTimestamp is a custom type for parsing Plex timestamps. It's mainly used by legacy API endpoints.
-type PlexTimestamp time.Time
-
-func (t *PlexTimestamp) UnmarshalXMLAttr(attr xml.Attr) error {
-	epoc, err := strconv.ParseInt(attr.Value, 10, 64)
-	if err != nil {
-		return err
-	}
-	*t = PlexTimestamp(time.Unix(epoc, 0))
-	return nil
 }

@@ -23,7 +23,7 @@ func TestConfig_WithClientIDAndDevice(t *testing.T) {
 func TestConfig_RegisterWithCredentials(t *testing.T) {
 	cfg, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
-	ctx := WithHTTPClient(t.Context(), &http.Client{Timeout: 10 * time.Second})
+	ctx := ContextWithHTTPClient(t.Context(), &http.Client{Timeout: 10 * time.Second})
 
 	tok, err := cfg.RegisterWithCredentials(ctx, "user", "pass")
 	if err != nil {
@@ -173,36 +173,6 @@ func TestConfig_JWTToken(t *testing.T) {
 	}
 }
 
-func TestConfig_RegisteredDevices_And_MediaServers(t *testing.T) {
-	cfg, ts := newTestServer(baseConfig)
-	t.Cleanup(ts.Close)
-	ctx := t.Context()
-
-	devs, err := cfg.RegisteredDevices(ctx, legacyToken)
-	if err != nil {
-		t.Fatalf("RegisteredDevices error: %v", err)
-	}
-	if len(devs) != 3 {
-		t.Fatalf("expected 2 devices, got %d", len(devs))
-	}
-	servers, err := cfg.MediaServers(context.Background(), legacyToken)
-	if err != nil {
-		t.Fatalf("MediaServers error: %v", err)
-	}
-	if len(servers) != 2 || servers[0].Name != "srv1" || servers[1].Name != "srv2" {
-		t.Fatalf("unexpected servers: %+v", servers)
-	}
-
-	// errors
-	ts.Close()
-	if _, err = cfg.RegisteredDevices(ctx, legacyToken); err == nil {
-		t.Fatalf("expected error from closed server")
-	}
-	if _, err = cfg.MediaServers(context.Background(), legacyToken); err == nil {
-		t.Fatalf("expected error from closed server")
-	}
-}
-
 func TestConfig_BadData(t *testing.T) {
 	cfg, ts := newTestServer(baseConfig)
 	ts.Close()
@@ -226,9 +196,6 @@ func TestConfig_BadData(t *testing.T) {
 	if _, err = cfg.JWTToken(ctx, privateKey, keyID); err == nil {
 		t.Fatalf("expected error from bad data")
 	}
-	if _, err = cfg.RegisteredDevices(ctx, legacyToken); err == nil {
-		t.Fatalf("expected error from bad data")
-	}
 }
 
 func TestConfig_BadToken(t *testing.T) {
@@ -237,9 +204,6 @@ func TestConfig_BadToken(t *testing.T) {
 	ctx := t.Context()
 
 	if _, _, err := cfg.GenerateAndUploadPublicKey(ctx, ""); !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected ErrInvalidToken from empty token, got: %v", err)
-	}
-	if _, err := cfg.RegisteredDevices(ctx, ""); !errors.Is(err, ErrInvalidToken) {
 		t.Fatalf("expected ErrInvalidToken from empty token, got: %v", err)
 	}
 }

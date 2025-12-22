@@ -72,48 +72,49 @@ func TestTokenSource_WithPIN(t *testing.T) {
 	}
 }
 
-func TestTokenSource_WithPMS(t *testing.T) {
-	// auth server
-	cfg, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
-	t.Cleanup(s.Close)
+/*
+	func TestTokenSource_WithPMS(t *testing.T) {
+		// auth server
+		cfg, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
+		t.Cleanup(s.Close)
 
-	// happy path - server name provided
-	ts := cfg.TokenSource(WithCredentials("user", "pass"), WithPMS("srv2"))
-	token, err := ts.Token(t.Context())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if token.String() != "tok-def" {
-		t.Fatalf("unexpected token: %s", token)
-	}
+		// happy path - server name provided
+		ts := cfg.tokenSource(WithCredentials("user", "pass"), WithPMS("srv2"))
+		token, err := ts.Token(t.Context())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if token.String() != "tok-def" {
+			t.Fatalf("unexpected token: %s", token)
+		}
 
-	// happy path - blank name returns first server
-	ts = cfg.TokenSource(WithCredentials("user", "pass"), WithPMS(""))
-	token, err = ts.Token(t.Context())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if token.String() != "tok-abc" {
-		t.Fatalf("unexpected token: %s", token)
-	}
+		// happy path - blank name returns first server
+		ts = cfg.tokenSource(WithCredentials("user", "pass"), WithPMS(""))
+		token, err = ts.Token(t.Context())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if token.String() != "tok-abc" {
+			t.Fatalf("unexpected token: %s", token)
+		}
 
-	// clear the cached token
-	ts.(*cachingTokenSource).init.done.Store(false)
-	// if registering fails, an error is returned
-	ts.(*cachingTokenSource).tokenSource.(*pmsTokenSource).tokenSource = fakeRegistrar{err: errors.New("test error")}
-	_, err = ts.Token(t.Context())
-	if err == nil {
-		t.Fatalf("expected error, got nil")
-	}
+		// clear the cached token
+		ts.(*cachingTokenSource).init.done.Store(false)
+		// if registering fails, an error is returned
+		ts.(*cachingTokenSource).tokenSource.(*pmsTokenSource).tokenSource = fakeRegistrar{err: errors.New("test error")}
+		_, err = ts.Token(t.Context())
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
 
-	// invalid server
-	ts = cfg.TokenSource(WithCredentials("user", "pass"), WithPMS("invalid pms sever"))
-	_, err = ts.Token(t.Context())
-	if err == nil {
-		t.Fatal("expected error")
+		// invalid server
+		ts = cfg.tokenSource(WithCredentials("user", "pass"), WithPMS("invalid pms sever"))
+		_, err = ts.Token(t.Context())
+		if err == nil {
+			t.Fatal("expected error")
+		}
 	}
-}
-
+*/
 func TestTokenSource_WithJWT(t *testing.T) {
 	// auth server
 	cfg, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
@@ -122,7 +123,6 @@ func TestTokenSource_WithJWT(t *testing.T) {
 	// happy path
 	ts := cfg.TokenSource(
 		WithCredentials("user", "pass"),
-		WithPMS("srv2"),
 		WithJWT(filepath.Join(t.TempDir(), "vault.enc"), "my-passphrase"),
 		//WithLogger(slog.New(slog.DiscardHandler)), // slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))),
 	)
@@ -188,7 +188,6 @@ func TestTokenSource_NoRegistrar(t *testing.T) {
 
 	ts := cfg.TokenSource(
 		WithJWT(filepath.Join(t.TempDir(), "vault.enc"), "my-passphrase"),
-		WithPMS("srv2"),
 	)
 	ctx := t.Context()
 	_, err := ts.Token(ctx)
