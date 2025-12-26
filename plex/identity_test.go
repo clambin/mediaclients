@@ -15,4 +15,5 @@ func TestPlexClient_GetIdentity(t *testing.T) {
 	identity, err := c.GetIdentity(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "SomeVersion", identity.Version)
+	assert.Equal(t, "pms-client-id-srv1", identity.MachineIdentifier)
 }

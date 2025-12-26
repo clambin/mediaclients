@@ -12,7 +12,7 @@ var plexResponses = testutils.Responses{
 	"/identity": {http.MethodGet: {Body: []byte(`{ "MediaContainer": {
     	"size": 0,
     	"claimed": true,
-    	"machineIdentifier": "SomeUUID",
+    	"machineIdentifier": "pms-client-id-srv1",
     	"version": "SomeVersion"
   	}}`)}},
 

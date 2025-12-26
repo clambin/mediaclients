@@ -86,7 +86,7 @@ func (c tokenSourceConfiguration) tokenSource() TokenSource {
 	// the registrar is the basis of every tokenSource.
 	source := c.registrar
 
-	// If we're using JWT tokens, use jwtTokenSource to register the device (if needed) and obtain a JWT token.
+	// If we're using JWT tokens, use jwtTokenSource to register the device (if needed) and get a JWT token.
 	if c.vault != nil {
 		source = &jwtTokenSource{
 			registrar: source,

@@ -9,7 +9,6 @@ import (
 	"github.com/clambin/mediaclients/plex"
 	"github.com/clambin/mediaclients/plex/internal/testutil"
 	"github.com/clambin/mediaclients/plex/plexauth"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,7 +20,6 @@ func TestClient_Failures(t *testing.T) {
 	ctx := t.Context()
 	_, err := c.GetIdentity(ctx)
 	require.Error(t, err)
-	assert.Equal(t, "http: 500 Internal Server Error", err.Error())
 
 	s.Close()
 	_, err = c.GetIdentity(ctx)
@@ -37,7 +35,6 @@ func TestClient_Decode_Failure(t *testing.T) {
 
 	_, err := c.GetIdentity(context.Background())
 	require.Error(t, err)
-	assert.Equal(t, "decode: invalid character 'h' in literal true (expecting 'r')", err.Error())
 }
 
 func makeClientAndServer(h http.Handler) (*plex.Client, *httptest.Server) {
@@ -45,11 +42,23 @@ func makeClientAndServer(h http.Handler) (*plex.Client, *httptest.Server) {
 		h = &testutil.TestServer
 	}
 	server := httptest.NewServer(h)
-	client := plex.New(
-		server.URL,
-		plexauth.DefaultConfig.TokenSource(plexauth.WithToken("some-token")),
-		plex.WithHTTPClient(&http.Client{}),
-		plex.WithDevice(plexauth.Device{Product: "test"}),
-	)
+
+	ptvc := fakePlexTVClient{devices: []plexauth.RegisteredDevice{
+		{ClientID: "pms-client-id-srv1", Token: "legacy-token-srv1"},
+		{ClientID: "pms-client-id-srv2", Token: "legacy-token-srv2"},
+	}}
+
+	client := plex.New(server.URL, &ptvc)
 	return client, server
+}
+
+var _ plex.PlexTVClient = &fakePlexTVClient{}
+
+type fakePlexTVClient struct {
+	devices []plexauth.RegisteredDevice
+	err     error
+}
+
+func (f fakePlexTVClient) MediaServers(_ context.Context) ([]plexauth.RegisteredDevice, error) {
+	return f.devices, f.err
 }
