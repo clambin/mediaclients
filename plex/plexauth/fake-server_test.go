@@ -1,6 +1,8 @@
 package plexauth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -9,7 +11,10 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
+	"time"
 
+	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
@@ -28,29 +33,37 @@ var baseConfig = DefaultConfig.
 		Model:           "model",
 	})
 
-func newTestServer(cfg Config) (Config, *httptest.Server) {
-	ts := httptest.NewServer(makeFakeServer(&cfg))
+func newTestServer(cfg Config) (Config, *fakeServer, *httptest.Server) {
+	s := makeFakeServer(&cfg)
+	ts := httptest.NewServer(&s)
 	cfg.URL = ts.URL
 	cfg.V2URL = ts.URL
-	return cfg, ts
+	return cfg, &s, ts
 }
 
 var _ http.Handler = &fakeServer{}
 
 type fakeServer struct {
 	http.Handler
-	config *Config
+	tokens     *tokens
+	config     *Config
+	jwtHandler *jwtHandler
 }
 
 func makeFakeServer(cfg *Config) fakeServer {
-	f := fakeServer{config: cfg}
+	t := tokens{tokens: make(map[string]string)}
+	f := fakeServer{
+		config:     cfg,
+		tokens:     &t,
+		jwtHandler: &jwtHandler{keySets: make(map[string]jwk.Set), tokens: &t},
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /users/sign_in.xml", f.handleRegisterWithCredentials)
 	mux.HandleFunc("POST /api/v2/pins", f.handlePIN)
 	mux.HandleFunc("GET /api/v2/pins/", f.handleValidatePIN)
-	mux.HandleFunc("POST /api/v2/auth/jwk", f.handleJWK)
-	mux.HandleFunc("GET /api/v2/auth/nonce", f.handleNonce)
-	mux.HandleFunc("POST /api/v2/auth/token", f.handleJWToken)
+	mux.HandleFunc("POST /api/v2/auth/jwk", f.jwtHandler.handleJWK)
+	mux.HandleFunc("GET /api/v2/auth/nonce", f.jwtHandler.handleNonce)
+	mux.HandleFunc("POST /api/v2/auth/token", f.jwtHandler.handleJWToken)
 	mux.HandleFunc("GET /devices.xml", f.handleDevices)
 	f.Handler = mux
 	return f
@@ -140,79 +153,6 @@ func (f fakeServer) handleValidatePIN(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (f fakeServer) handleJWK(w http.ResponseWriter, r *http.Request) {
-	wantHeaders := map[string]string{
-		"Accept":                   "application/json",
-		"X-Plex-Client-Identifier": f.config.ClientID,
-		"X-Plex-Token":             legacyToken,
-	}
-	if err := validateRequest(r, wantHeaders); err != nil {
-		plexError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	req := make(map[string]any)
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	jwk, ok := req["jwk"].(map[string]any)
-	if !ok {
-		http.Error(w, "missing jwk", http.StatusBadRequest)
-		return
-	}
-	for _, attrib := range []string{"alg", "crv", "kid", "kty", "use"} {
-		if value, ok := jwk[attrib].(string); !ok || value == "" {
-			http.Error(w, "missing jwt attribute: "+attrib, http.StatusBadRequest)
-		}
-	}
-	w.WriteHeader(http.StatusCreated)
-}
-
-func (f fakeServer) handleNonce(w http.ResponseWriter, r *http.Request) {
-	wantHeaders := map[string]string{
-		"Accept":                   "application/json",
-		"X-Plex-Client-Identifier": f.config.ClientID,
-	}
-	if err := validateRequest(r, wantHeaders); err != nil {
-		plexError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{"nonce": "01234567890"})
-}
-
-func (f fakeServer) handleJWToken(w http.ResponseWriter, r *http.Request) {
-	wantHeaders := map[string]string{
-		"Accept":                   "application/json",
-		"X-Plex-Client-Identifier": f.config.ClientID,
-	}
-	if err := validateRequest(r, wantHeaders); err != nil {
-		plexError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	var request map[string]string
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	signedToken, ok := request["jwt"]
-	if !ok {
-		http.Error(w, "missing jwt", http.StatusBadRequest)
-		return
-	}
-	tok, err := jwt.Parse([]byte(signedToken), jwt.WithVerify(false))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if aud, ok := tok.Audience(); !ok || len(aud) == 0 || aud[0] != "plex.tv" {
-		http.Error(w, "audience missing/invalid", http.StatusBadRequest)
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{"auth_token": legacyToken}) // TODO: should be jwt!
-}
-
 func (f fakeServer) handleDevices(w http.ResponseWriter, r *http.Request) {
 	wantHeaders := map[string]string{
 		"Accept":                   "application/xml",
@@ -235,8 +175,15 @@ func (f fakeServer) handleDevices(w http.ResponseWriter, r *http.Request) {
 
 func validateRequest(r *http.Request, wantHeaders map[string]string) error {
 	for k, v := range wantHeaders {
-		if r.Header.Get(k) != v {
-			return fmt.Errorf("invalid/missing header: %s=%s", k, r.Header.Get(k))
+		got := r.Header.Get(k)
+		if v == "*" {
+			if got == "" {
+				return fmt.Errorf("missing header: %s", k)
+			}
+		} else {
+			if got != v {
+				return fmt.Errorf("invalid header: %s=%s", k, got)
+			}
 		}
 	}
 	return nil
@@ -245,4 +192,148 @@ func validateRequest(r *http.Request, wantHeaders map[string]string) error {
 func plexError(w http.ResponseWriter, code int, msg string) {
 	w.WriteHeader(code)
 	_, _ = w.Write([]byte(`{ "error": "` + msg + `" }"`))
+}
+
+type tokens struct {
+	tokens map[string]string
+	lock   sync.RWMutex
+}
+
+func (t *tokens) Validate(k, v string) bool {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+	return t.tokens[k] == v
+}
+
+func (t *tokens) SetToken(key, value string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	t.tokens[key] = value
+}
+
+func (t *tokens) CreateLegacyToken(key string) string {
+	clearToken := make([]byte, 10)
+	_, _ = rand.Read(clearToken)
+	encodedToken := hex.EncodeToString(clearToken)
+	t.SetToken(key, encodedToken)
+	return encodedToken
+}
+
+// jwtHandler is a fake server that handles the JWT flows for plex.tv.
+type jwtHandler struct {
+	tokens  *tokens
+	keySets map[string]jwk.Set
+	lock    sync.Mutex
+}
+
+func (h *jwtHandler) handleJWK(w http.ResponseWriter, r *http.Request) {
+	wantHeaders := map[string]string{
+		"Accept":                   "application/json",
+		"X-Plex-Client-Identifier": "*",
+		"X-Plex-Token":             "*",
+	}
+	if err := validateRequest(r, wantHeaders); err != nil {
+		plexError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	clientID := r.Header.Get("X-Plex-Client-Identifier")
+	token := r.Header.Get("X-Plex-Token")
+	if !h.tokens.Validate(clientID, token) {
+		http.Error(w, "invalid X-Plex-Token header", http.StatusUnauthorized)
+		return
+	}
+	if _, ok := h.keySets[clientID]; ok {
+		http.Error(w, "key already generated", http.StatusConflict) // not the official error code, but it's fine for our tests
+		return
+	}
+
+	var resp map[string]json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&resp); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	keySet, err := jwk.Parse(resp["jwk"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(keySet.Keys()) == 0 {
+		http.Error(w, "invalid jwk: no key found", http.StatusBadRequest)
+		return
+	}
+	var kid string
+	if err = keySet.Get("kid", &kid); err != nil || kid == "" {
+		http.Error(w, "invalid jwk: no key id found", http.StatusBadRequest)
+		return
+	}
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	if h.keySets == nil {
+		h.keySets = make(map[string]jwk.Set)
+	}
+	h.keySets[clientID] = keySet
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *jwtHandler) handleNonce(w http.ResponseWriter, r *http.Request) {
+	wantHeaders := map[string]string{
+		"Accept":                   "application/json",
+		"X-Plex-Client-Identifier": "*",
+	}
+	if err := validateRequest(r, wantHeaders); err != nil {
+		plexError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	nonce := make([]byte, 18)
+	_, _ = rand.Read(nonce)
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"nonce": hex.EncodeToString(nonce)})
+}
+
+func (h *jwtHandler) handleJWToken(w http.ResponseWriter, r *http.Request) {
+	wantHeaders := map[string]string{
+		"Accept":                   "application/json",
+		"X-Plex-Client-Identifier": "*",
+	}
+	if err := validateRequest(r, wantHeaders); err != nil {
+		plexError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	clientID := r.Header.Get("X-Plex-Client-Identifier")
+
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	keySet, ok := h.keySets[clientID]
+	if !ok {
+		http.Error(w, "no key set found for client", http.StatusUnauthorized)
+		return
+	}
+	var req map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	t, err := jwt.Parse([]byte(req["jwt"]), jwt.WithKeySet(keySet))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// TODO: this isn't correct. auth sends back its own (signed) token.
+	// this is just a quick hack to get the tests working.
+	_ = t.Set(jwt.IssuedAtKey, time.Now())
+	_ = t.Set(jwt.ExpirationKey, time.Now().Add(7*24*time.Hour))
+	body, err := jwt.NewSerializer().Serialize(t)
+	if err != nil {
+		panic(err)
+	}
+
+	h.tokens.SetToken(clientID, req["jwt"])
+	response := struct {
+		AuthToken string `json:"auth_token"`
+	}{AuthToken: string(body)}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(response)
 }

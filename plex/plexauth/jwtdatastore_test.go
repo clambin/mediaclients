@@ -2,27 +2,28 @@ package plexauth
 
 import (
 	"errors"
-	"path/filepath"
+	"os"
 	"reflect"
+	"sync/atomic"
 	"testing"
-
-	"github.com/clambin/mediaclients/plex/internal/vault"
 )
 
 func TestJWTDataStore(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "test.enc")
+	var v fakeVault
+	s := jwtDataStore{vault: &v, clientID: "my-client-id"}
+	if _, err := s.Load(); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected os.ErrNotExist, got %v", err)
+	}
 
-	s1 := newJWTDataStore(path, "my-secure-passphrase", "my-client-id")
-	want := jwtSecureData{
+	want := JWTSecureData{
 		KeyID:      "my-key-id",
 		ClientID:   "my-client-id",
 		PrivateKey: []byte("my-private-key"),
 	}
-	err := s1.Save(want)
-	if err != nil {
+	if err := s.Save(want); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	got, err := s1.Load()
+	got, err := s.Load()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -30,19 +31,33 @@ func TestJWTDataStore(t *testing.T) {
 		t.Fatalf("Load() want: %+v, got: %+v", want, got)
 	}
 
-	s2 := newJWTDataStore(path, "invalid-passphrase", "my-client-id")
-	_, err = s2.Load()
-	var errInvalidKey *vault.ErrDecryptionFailed
-	if !errors.As(err, &errInvalidKey) {
-		t.Fatalf("expected error, got %#+v", err)
-	}
+	// store the wrong client ID
+	data, _ := v.Load()
+	data.ClientID = "invalid-client-id"
+	_ = v.Save(data)
 
-	s3 := newJWTDataStore(path, "my-secure-passphrase", "invalid-client-id")
-	got, err = s3.Load()
+	got, err = s.Load()
 	if !errors.Is(err, ErrInvalidClientID) {
 		t.Fatalf("expected error, got nil")
 	}
-	if got.ClientID != "my-client-id" {
-		t.Fatalf("unexpected client ID: %s", got.ClientID)
+}
+
+type fakeVault struct {
+	data atomic.Pointer[JWTSecureData]
+	err  error
+}
+
+func (f *fakeVault) Load() (JWTSecureData, error) {
+	if f.err != nil {
+		return JWTSecureData{}, f.err
 	}
+	if data := f.data.Load(); data != nil {
+		return *data, nil
+	}
+	return JWTSecureData{}, os.ErrNotExist
+}
+
+func (f *fakeVault) Save(data JWTSecureData) error {
+	f.data.Store(&data)
+	return nil
 }

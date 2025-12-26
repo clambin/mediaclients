@@ -5,8 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"os"
-	"path/filepath"
-	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -24,7 +22,7 @@ func TestTokenSource_WithToken(t *testing.T) {
 
 func TestTokenSource_WithCredentials(t *testing.T) {
 	// auth server
-	cfg, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
+	cfg, _, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
 	t.Cleanup(s.Close)
 
 	// happy path
@@ -49,7 +47,7 @@ func TestTokenSource_WithCredentials(t *testing.T) {
 
 func TestTokenSource_WithPIN(t *testing.T) {
 	// auth server
-	cfg, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
+	cfg, _, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
 	t.Cleanup(s.Close)
 
 	// happy path
@@ -74,29 +72,33 @@ func TestTokenSource_WithPIN(t *testing.T) {
 
 func TestTokenSource_WithJWT(t *testing.T) {
 	// auth server
-	cfg, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
-	t.Cleanup(s.Close)
+	cfg, s, tts := newTestServer(DefaultConfig.WithClientID("my-client-id"))
+	t.Cleanup(tts.Close)
+
+	s.tokens.SetToken("my-client-id", legacyToken)
 
 	// happy path
+	var f fakeVault
 	ts := cfg.TokenSource(
 		WithCredentials("user", "pass"),
-		WithJWT(filepath.Join(t.TempDir(), "vault.enc"), "my-passphrase"),
+		WithJWT(&f),
 		WithLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))),
 	)
 	token, err := ts.Token(t.Context())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	// TODO: fakeServer should return a JWT here
-	if got := token.String(); got != legacyToken {
-		t.Fatalf("unexpected token: %s", got)
+	if !token.IsJWT() {
+		t.Fatal("expected JWT token")
 	}
 }
 
 func Test_jwtTokenSource(t *testing.T) {
 	// auth server
-	cfg, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
-	t.Cleanup(s.Close)
+	cfg, s, tts := newTestServer(DefaultConfig.WithClientID("my-client-id"))
+	t.Cleanup(tts.Close)
+
+	s.tokens.SetToken("my-client-id", legacyToken)
 
 	logger := slog.New(slog.DiscardHandler) //slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	v := fakeVault{}
@@ -113,26 +115,33 @@ func Test_jwtTokenSource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got := token.String(); got != legacyToken {
-		t.Fatalf("unexpected token: %s", got)
+	if !token.IsJWT() {
+		t.Fatal("expected JWT token")
 	}
+}
 
-	// secure data exists, but it contains an invalid Client ID.
-	v.err = ErrInvalidClientID
-	ts = jwtTokenSource{
+func Test_jwtTokenSource_WrongClientID(t *testing.T) {
+	// auth server
+	cfg, s, tts := newTestServer(DefaultConfig.WithClientID("my-client-id"))
+	t.Cleanup(tts.Close)
+
+	s.tokens.SetToken("my-client-id", legacyToken)
+
+	v := fakeVault{err: ErrInvalidClientID}
+	ts := jwtTokenSource{
 		registrar: fakeRegistrar{token: legacyToken},
 		vault:     &v,
-		logger:    logger,
+		logger:    slog.New(slog.DiscardHandler),
 		config:    &cfg,
 	}
+	ctx := t.Context()
 
-	// secure data is invalid, the device is re-registered, and a new token is returned.
-	token, err = ts.Token(ctx)
+	token, err := ts.Token(ctx)
 	if err != nil {
-		t.Fatalf("expected error, got nil")
+		t.Fatalf("expected no error, got %v", err)
 	}
-	if token.String() != legacyToken {
-		t.Fatalf("unexpected token: %s", token)
+	if !token.IsJWT() {
+		t.Fatal("expected JWT token")
 	}
 	if secureData := v.data.Load(); secureData.ClientID != "my-client-id" {
 		t.Fatalf("unexpected client ID: %s", secureData.ClientID)
@@ -141,11 +150,12 @@ func Test_jwtTokenSource(t *testing.T) {
 
 func TestTokenSource_NoRegistrar(t *testing.T) {
 	// auth server
-	cfg, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
+	cfg, _, s := newTestServer(DefaultConfig.WithClientID("my-client-id"))
 	s.Close()
 
+	var f fakeVault
 	ts := cfg.TokenSource(
-		WithJWT(filepath.Join(t.TempDir(), "vault.enc"), "my-passphrase"),
+		WithJWT(&f),
 	)
 	ctx := t.Context()
 	_, err := ts.Token(ctx)
@@ -178,23 +188,3 @@ func (f fakeRegistrar) Token(_ context.Context) (Token, error) {
 }
 
 var _ secureDataVault = (*fakeVault)(nil)
-
-type fakeVault struct {
-	data atomic.Pointer[jwtSecureData]
-	err  error
-}
-
-func (f *fakeVault) Load() (jwtSecureData, error) {
-	if f.err != nil {
-		return jwtSecureData{}, f.err
-	}
-	if data := f.data.Load(); data != nil {
-		return *data, nil
-	}
-	return jwtSecureData{}, os.ErrNotExist
-}
-
-func (f *fakeVault) Save(data jwtSecureData) error {
-	f.data.Store(&data)
-	return nil
-}

@@ -58,11 +58,12 @@ func WithLogger(logger *slog.Logger) TokenSourceOption {
 // right now is that a JWT-enabled TokenSource does not reregister each time it starts.  But it comes with an
 // operational burden (the need for persistent data) and some risk. Approach with caution.
 // See [Config.JWTToken] for more details.
-//
-// TODO: use an interface to a secure vault so users can override it
-func WithJWT(storePath, passphrase string) TokenSourceOption {
+func WithJWT(store JWTSecureDataStore) TokenSourceOption {
 	return func(c *tokenSourceConfiguration) {
-		c.vault = newJWTDataStore(storePath, passphrase, c.config.ClientID)
+		c.vault = &jwtDataStore{
+			vault:    store,
+			clientID: c.config.ClientID,
+		}
 	}
 }
 
@@ -163,13 +164,13 @@ type jwtTokenSource struct {
 	vault      secureDataVault
 	logger     *slog.Logger
 	config     *Config
-	secureData jwtSecureData
+	secureData JWTSecureData
 	init       untilSuccessful
 }
 
 type secureDataVault interface {
-	Load() (jwtSecureData, error)
-	Save(jwtSecureData) error
+	Load() (JWTSecureData, error)
+	Save(JWTSecureData) error
 }
 
 func (s *jwtTokenSource) Token(ctx context.Context) (Token, error) {

@@ -21,7 +21,7 @@ func TestConfig_WithClientIDAndDevice(t *testing.T) {
 }
 
 func TestConfig_RegisterWithCredentials(t *testing.T) {
-	cfg, ts := newTestServer(baseConfig)
+	cfg, _, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := ContextWithHTTPClient(t.Context(), &http.Client{Timeout: 10 * time.Second})
 
@@ -41,7 +41,7 @@ func TestConfig_RegisterWithCredentials(t *testing.T) {
 }
 
 func TestConfig_RegisterWithPIN(t *testing.T) {
-	cfg, ts := newTestServer(baseConfig)
+	cfg, _, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 
 	// RegisterWithPIN polls until token available
@@ -63,7 +63,7 @@ func TestConfig_RegisterWithPIN(t *testing.T) {
 }
 
 func TestConfig_RegisterWithPIN_Timeout(t *testing.T) {
-	cfg, ts := newTestServer(baseConfig.WithClientID("pin-timeout-test"))
+	cfg, _, ts := newTestServer(baseConfig.WithClientID("pin-timeout-test"))
 	t.Cleanup(ts.Close)
 
 	// RegisterWithPIN should poll until token available
@@ -82,7 +82,7 @@ func TestConfig_RegisterWithPIN_Timeout(t *testing.T) {
 }
 
 func TestConfig_PINRequest_And_ValidatePIN(t *testing.T) {
-	cfg, ts := newTestServer(baseConfig)
+	cfg, _, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
 
@@ -121,12 +121,15 @@ func TestConfig_PINRequest_And_ValidatePIN(t *testing.T) {
 		t.Fatalf("expected error from closed server")
 	}
 }
+
 func TestConfig_GenerateAndUploadPublicKey(t *testing.T) {
-	cfg, ts := newTestServer(baseConfig)
+	cfg, s, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
 
-	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, legacyToken)
+	token := s.tokens.CreateLegacyToken(cfg.ClientID)
+
+	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, Token(token))
 	if err != nil {
 		t.Fatalf("GenerateAndUploadPublicKey error: %v", err)
 	}
@@ -143,17 +146,19 @@ func TestConfig_GenerateAndUploadPublicKey(t *testing.T) {
 
 	// errors
 	ts.Close()
-	if _, _, err = cfg.GenerateAndUploadPublicKey(ctx, legacyToken); err == nil {
+	if _, _, err = cfg.GenerateAndUploadPublicKey(ctx, Token(token)); err == nil {
 		t.Fatalf("expected error from closed server")
 	}
 }
 
 func TestConfig_JWTToken(t *testing.T) {
-	cfg, ts := newTestServer(baseConfig)
+	cfg, s, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
 
-	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, legacyToken)
+	token := s.tokens.CreateLegacyToken(cfg.ClientID)
+
+	privateKey, keyID, err := cfg.GenerateAndUploadPublicKey(ctx, Token(token))
 	if err != nil {
 		t.Fatalf("GenerateAndUploadPublicKey error: %v", err)
 	}
@@ -162,8 +167,8 @@ func TestConfig_JWTToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("JWTToken error: %v", err)
 	}
-	if got := tok.String(); got != legacyToken {
-		t.Fatalf("unexpected token: %s, want: %s", got, legacyToken)
+	if !tok.IsJWT() {
+		t.Fatal("expected JWT token")
 	}
 
 	// errors
@@ -174,7 +179,7 @@ func TestConfig_JWTToken(t *testing.T) {
 }
 
 func TestConfig_BadData(t *testing.T) {
-	cfg, ts := newTestServer(baseConfig)
+	cfg, _, ts := newTestServer(baseConfig)
 	ts.Close()
 	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -199,7 +204,7 @@ func TestConfig_BadData(t *testing.T) {
 }
 
 func TestConfig_BadToken(t *testing.T) {
-	cfg, ts := newTestServer(baseConfig)
+	cfg, _, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
 

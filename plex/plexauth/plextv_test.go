@@ -6,7 +6,7 @@ import (
 
 func TestPlexTVClient_RegisteredDevices_And_MediaServers(t *testing.T) {
 	// TODO: probably don't need a real test server anymore for PlexTV tests. Mocking the handler is probably enough.
-	cfg, ts := newTestServer(baseConfig)
+	cfg, _, ts := newTestServer(baseConfig)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
 	c := cfg.PlexTVClient(WithToken(legacyToken))
