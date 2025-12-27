@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/clambin/mediaclients/plex/plexauth"
+	"github.com/clambin/mediaclients/plex/plextv"
 )
 
 func TestAuthMiddleware(t *testing.T) {
@@ -21,13 +21,13 @@ func TestAuthMiddleware(t *testing.T) {
 		{
 			name:              "valid client ID",
 			machineIdentifier: "pms-1-client-id",
-			plexTVClient:      fakePlexTVClient{devices: []plexauth.RegisteredDevice{{ClientID: "pms-1-client-id", Token: "valid-token"}}},
+			plexTVClient:      fakePlexTVClient{devices: []plextv.RegisteredDevice{{ClientID: "pms-1-client-id", Token: "valid-token"}}},
 			pass:              true,
 		},
 		{
 			name:              "invalid client ID",
 			machineIdentifier: "pms-2-client-id",
-			plexTVClient:      fakePlexTVClient{devices: []plexauth.RegisteredDevice{{ClientID: "pms-1-client-id", Token: "valid-token"}}},
+			plexTVClient:      fakePlexTVClient{devices: []plextv.RegisteredDevice{{ClientID: "pms-1-client-id", Token: "valid-token"}}},
 			pass:              false,
 		},
 		{
@@ -90,10 +90,14 @@ func TestAuthMiddleware(t *testing.T) {
 var _ PlexTVClient = fakePlexTVClient{}
 
 type fakePlexTVClient struct {
-	devices []plexauth.RegisteredDevice
+	devices []plextv.RegisteredDevice
 	err     error
 }
 
-func (f fakePlexTVClient) MediaServers(_ context.Context) ([]plexauth.RegisteredDevice, error) {
+func (f fakePlexTVClient) User(_ context.Context) (plextv.User, error) {
+	return plextv.User{}, f.err
+}
+
+func (f fakePlexTVClient) MediaServers(_ context.Context) ([]plextv.RegisteredDevice, error) {
 	return f.devices, f.err
 }

@@ -1,4 +1,4 @@
-package plexauth
+package plextv
 
 import (
 	"context"
@@ -7,19 +7,26 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"slices"
 )
 
-// A PlexTVClient is a PlexTV client that can be used to interact with the public Plex API.
-type PlexTVClient struct {
+// PlexTVClient returns a [Client] that can be used to query the plex.tv API.
+func (c Config) PlexTVClient(opts ...TokenSourceOption) Client {
+	return Client{
+		config:      &c,
+		tokenSource: c.TokenSource(opts...),
+	}
+}
+
+// A Client is a PlexTV client that can be used to interact with the public Plex API.
+type Client struct {
 	config      *Config
 	tokenSource TokenSource
 }
 
-// User returns the information of the user associated with the PlexTVClient's TokenSource.
+// User returns the information of the user associated with the Client's TokenSource.
 // This call also updates the Device information in plex.tv.
-func (c PlexTVClient) User(ctx context.Context) (User, error) {
+func (c Client) User(ctx context.Context) (User, error) {
 	resp, err := c.doWithToken(ctx, http.MethodGet, c.config.URL+"/api/v2/user", nil, http.StatusOK, func(req *http.Request) {
 		c.config.Device.populateRequest(req)
 	})
@@ -34,6 +41,7 @@ func (c PlexTVClient) User(ctx context.Context) (User, error) {
 	return user, nil
 }
 
+/*
 // Resources returns all resources (mainly Plex Media Servers) visible for the current token.
 //
 // Use values to filter the results. According to the [Plex API documentation], the following values are supported:
@@ -47,7 +55,7 @@ func (c PlexTVClient) User(ctx context.Context) (User, error) {
 // and relay should only be used as a last resort as bandwidth on relay connections is limited.
 //
 // [Plex API documentation]: https://developer.plex.tv/pms/#section/API-Info/Authenticating-with-Plex
-func (c PlexTVClient) Resources(ctx context.Context, values url.Values) ([]Resource, error) {
+func (c Client) Resources(ctx context.Context, values url.Values) ([]Resource, error) {
 	target := c.config.V2URL + "/api/v2/resources"
 	if len(values) > 0 {
 		target += "?" + values.Encode()
@@ -66,7 +74,7 @@ func (c PlexTVClient) Resources(ctx context.Context, values url.Values) ([]Resou
 }
 
 // Devices return all devices visible for the current token. It's the response to /api/v2/devices endpoint.
-func (c PlexTVClient) Devices(ctx context.Context, values url.Values) ([]PlexTVDevice, error) {
+func (c Client) Devices(ctx context.Context, values url.Values) ([]PlexTVDevice, error) {
 	target := c.config.V2URL + "/api/v2/devices"
 	if len(values) > 0 {
 		target += "?" + values.Encode()
@@ -85,9 +93,10 @@ func (c PlexTVClient) Devices(ctx context.Context, values url.Values) ([]PlexTVD
 
 	return devices, nil
 }
+*/
 
 // RegisteredDevices returns all devices registered under the provided token
-func (c PlexTVClient) RegisteredDevices(ctx context.Context) ([]RegisteredDevice, error) {
+func (c Client) RegisteredDevices(ctx context.Context) ([]RegisteredDevice, error) {
 	resp, err := c.doWithToken(ctx, http.MethodGet, c.config.URL+"/devices.xml", nil, http.StatusOK, func(req *http.Request) {
 		req.Header.Set("Accept", "application/xml")
 		c.config.Device.populateRequest(req) // TODO: ignored by plex.tv
@@ -109,7 +118,7 @@ func (c PlexTVClient) RegisteredDevices(ctx context.Context) ([]RegisteredDevice
 }
 
 // MediaServers returns all Plex Media Servers registered under the provided token
-func (c PlexTVClient) MediaServers(ctx context.Context) ([]RegisteredDevice, error) {
+func (c Client) MediaServers(ctx context.Context) ([]RegisteredDevice, error) {
 	// get all devices
 	devices, err := c.RegisteredDevices(ctx)
 	if err == nil {
@@ -121,7 +130,7 @@ func (c PlexTVClient) MediaServers(ctx context.Context) ([]RegisteredDevice, err
 	return devices, err
 }
 
-func (c PlexTVClient) doWithToken(ctx context.Context, method, target string, body io.Reader, wantStatus int, formatters ...requestFormatter) (*http.Response, error) {
+func (c Client) doWithToken(ctx context.Context, method, target string, body io.Reader, wantStatus int, formatters ...requestFormatter) (*http.Response, error) {
 	token, err := c.tokenSource.Token(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("token: %w", err)

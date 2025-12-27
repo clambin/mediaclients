@@ -1,7 +1,8 @@
-package plexauth
+package plextv
 
 import (
 	"context"
+	"crypto/ed25519"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -9,6 +10,18 @@ import (
 	"sync"
 	"time"
 )
+
+// TokenSource returns an [TokenSource] that can be passed to plex.New() to create an authenticated Plex client.
+func (c Config) TokenSource(opts ...TokenSourceOption) TokenSource {
+	cfg := tokenSourceConfiguration{
+		config: &c,
+		logger: slog.New(slog.DiscardHandler),
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	return cfg.tokenSource()
+}
 
 // TokenSourceOption provides the configuration to determine the desired TokenSource.
 type TokenSourceOption func(*tokenSourceConfiguration)
@@ -68,13 +81,11 @@ func WithJWT(store JWTSecureDataStore) TokenSourceOption {
 }
 
 type tokenSourceConfiguration struct {
-	config      *Config
-	registrar   TokenSource
-	token       Token
-	logger      *slog.Logger
-	vault       *jwtDataStore
-	pmsName     string
-	usePMSToken bool
+	config    *Config
+	registrar TokenSource
+	token     Token
+	logger    *slog.Logger
+	vault     *jwtDataStore
 }
 
 func (c tokenSourceConfiguration) tokenSource() TokenSource {
@@ -145,6 +156,7 @@ func (s *cachingTokenSource) Token(ctx context.Context) (Token, error) {
 	defer s.lock.Unlock()
 
 	// if we have a valid token cached, return it
+	// Note: IsValid parses the token on each call, which is quite expensive. But we must test it here, since a JWT may expire.
 	if s.token != nil && s.token.IsValid() {
 		return *s.token, nil
 	}
@@ -231,4 +243,38 @@ func (s *jwtTokenSource) initialize(ctx context.Context) (err error) {
 
 	s.logger.Debug("token data saved successfully")
 	return nil
+}
+
+type JWTSecureDataStore interface {
+	Save(data JWTSecureData) error
+	Load() (JWTSecureData, error)
+}
+
+// JWTSecureData contains the data required to request a JWTToken.
+type JWTSecureData struct {
+	KeyID      string             `json:"key-id"`
+	ClientID   string             `json:"client-id"`
+	PrivateKey ed25519.PrivateKey `json:"private-key"`
+}
+
+type jwtDataStore struct {
+	vault    JWTSecureDataStore
+	clientID string
+}
+
+// Save saves the given data to the data store.
+func (s *jwtDataStore) Save(data JWTSecureData) error {
+	return s.vault.Save(data)
+}
+
+// Load loads the data from the data store. It returns ErrInvalidClientID if the data's client ID does not match.
+func (s *jwtDataStore) Load() (JWTSecureData, error) {
+	data, err := s.vault.Load()
+	if err != nil {
+		return JWTSecureData{}, err
+	}
+	if data.ClientID != s.clientID {
+		err = ErrInvalidClientID
+	}
+	return data, err
 }

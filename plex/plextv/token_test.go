@@ -1,4 +1,4 @@
-package plexauth
+package plextv
 
 import (
 	"testing"

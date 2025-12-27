@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"github.com/clambin/mediaclients/plex/plexauth"
+	"github.com/clambin/mediaclients/plex/plextv"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -20,14 +20,15 @@ func WithHTTPClient(httpClient *http.Client) Option {
 	}
 }
 
-// Client calls the Plex API
+// Client calls a Plex Media Server's API
 type Client struct {
 	httpClient *http.Client
 	url        string
 }
 
 type PlexTVClient interface {
-	MediaServers(ctx context.Context) ([]plexauth.RegisteredDevice, error)
+	User(ctx context.Context) (plextv.User, error)
+	MediaServers(ctx context.Context) ([]plextv.RegisteredDevice, error)
 }
 
 // New creates a new Plex client, located at the given URL.
@@ -83,7 +84,7 @@ type authMiddleware struct {
 	g            singleflight.Group
 	httpClient   *http.Client
 	plexTVClient PlexTVClient
-	token        atomic.Pointer[plexauth.Token]
+	token        atomic.Pointer[plextv.Token]
 	url          string
 }
 
@@ -98,13 +99,16 @@ func (a *authMiddleware) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 		token = &tok
 		a.token.Store(token)
-
+		// update the device if needed
+		if _, err = a.plexTVClient.User(req.Context()); err != nil {
+			return nil, fmt.Errorf("update device: %w", err)
+		}
 	}
 	req.Header.Set("X-Plex-Token", token.String())
 	return a.next.RoundTrip(req)
 }
 
-func (a *authMiddleware) getToken(ctx context.Context) (plexauth.Token, error) {
+func (a *authMiddleware) getToken(ctx context.Context) (plextv.Token, error) {
 	// get the Plex Media Server's ClientID (machineID)
 	pmsClientID, err := a.getPMSClientID(ctx)
 	if err != nil {
@@ -119,7 +123,7 @@ func (a *authMiddleware) getToken(ctx context.Context) (plexauth.Token, error) {
 	// find the correct device and return its token
 	for _, device := range devices {
 		if device.ClientID == pmsClientID {
-			return plexauth.Token(device.Token), nil
+			return plextv.Token(device.Token), nil
 		}
 	}
 	// if no PMS server is found, return an error

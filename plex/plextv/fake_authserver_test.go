@@ -1,4 +1,4 @@
-package plexauth
+package plextv
 
 import (
 	"crypto/rand"
@@ -20,7 +20,7 @@ import (
 
 const legacyToken = "12345678901234567890"
 
-var baseConfig = DefaultConfig.
+var baseConfig = DefaultConfig().
 	WithClientID("abc").
 	WithDevice(Device{
 		Product:         "TestProduct",
@@ -33,7 +33,7 @@ var baseConfig = DefaultConfig.
 		Model:           "model",
 	})
 
-func newTestServer(cfg Config) (Config, *fakeServer, *httptest.Server) {
+func newTestServer(cfg Config) (Config, *fakeAuthServer, *httptest.Server) {
 	s := makeFakeServer(&cfg)
 	ts := httptest.NewServer(&s)
 	cfg.URL = ts.URL
@@ -41,18 +41,18 @@ func newTestServer(cfg Config) (Config, *fakeServer, *httptest.Server) {
 	return cfg, &s, ts
 }
 
-var _ http.Handler = &fakeServer{}
+var _ http.Handler = &fakeAuthServer{}
 
-type fakeServer struct {
+type fakeAuthServer struct {
 	http.Handler
 	tokens     *tokens
 	config     *Config
 	jwtHandler *jwtHandler
 }
 
-func makeFakeServer(cfg *Config) fakeServer {
+func makeFakeServer(cfg *Config) fakeAuthServer {
 	t := tokens{tokens: make(map[string]string)}
-	f := fakeServer{
+	f := fakeAuthServer{
 		config:     cfg,
 		tokens:     &t,
 		jwtHandler: &jwtHandler{keySets: make(map[string]jwk.Set), tokens: &t},
@@ -69,7 +69,7 @@ func makeFakeServer(cfg *Config) fakeServer {
 	return f
 }
 
-func (f fakeServer) handleRegisterWithCredentials(w http.ResponseWriter, r *http.Request) {
+func (f fakeAuthServer) handleRegisterWithCredentials(w http.ResponseWriter, r *http.Request) {
 	wantHeaders := map[string]string{
 		"Content-Type":             "application/x-www-form-urlencoded",
 		"Accept":                   "application/xml",
@@ -101,7 +101,7 @@ func (f fakeServer) handleRegisterWithCredentials(w http.ResponseWriter, r *http
 	}{AuthenticationToken: legacyToken})
 }
 
-func (f fakeServer) handlePIN(w http.ResponseWriter, r *http.Request) {
+func (f fakeAuthServer) handlePIN(w http.ResponseWriter, r *http.Request) {
 	wantHeaders := map[string]string{
 		"Accept":                   "application/json",
 		"X-Plex-Client-Identifier": f.config.ClientID,
@@ -130,7 +130,7 @@ func (f fakeServer) handlePIN(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (f fakeServer) handleValidatePIN(w http.ResponseWriter, r *http.Request) {
+func (f fakeAuthServer) handleValidatePIN(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/api/v2/pins/")
 	codes := map[string]string{"42": "1234"}
 	code, ok := codes[id]
@@ -153,7 +153,7 @@ func (f fakeServer) handleValidatePIN(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (f fakeServer) handleDevices(w http.ResponseWriter, r *http.Request) {
+func (f fakeAuthServer) handleDevices(w http.ResponseWriter, r *http.Request) {
 	wantHeaders := map[string]string{
 		"Accept":                   "application/xml",
 		"X-Plex-Client-Identifier": f.config.ClientID,

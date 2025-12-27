@@ -8,7 +8,7 @@ import (
 
 	"github.com/clambin/mediaclients/plex"
 	"github.com/clambin/mediaclients/plex/internal/testutil"
-	"github.com/clambin/mediaclients/plex/plexauth"
+	"github.com/clambin/mediaclients/plex/plextv"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,7 +43,7 @@ func makeClientAndServer(h http.Handler) (*plex.Client, *httptest.Server) {
 	}
 	server := httptest.NewServer(h)
 
-	ptvc := fakePlexTVClient{devices: []plexauth.RegisteredDevice{
+	ptvc := fakePlexTVClient{devices: []plextv.RegisteredDevice{
 		{ClientID: "pms-client-id-srv1", Token: "legacy-token-srv1"},
 		{ClientID: "pms-client-id-srv2", Token: "legacy-token-srv2"},
 	}}
@@ -55,10 +55,14 @@ func makeClientAndServer(h http.Handler) (*plex.Client, *httptest.Server) {
 var _ plex.PlexTVClient = &fakePlexTVClient{}
 
 type fakePlexTVClient struct {
-	devices []plexauth.RegisteredDevice
+	devices []plextv.RegisteredDevice
 	err     error
 }
 
-func (f fakePlexTVClient) MediaServers(_ context.Context) ([]plexauth.RegisteredDevice, error) {
+func (f fakePlexTVClient) User(_ context.Context) (plextv.User, error) {
+	return plextv.User{}, nil
+}
+
+func (f fakePlexTVClient) MediaServers(_ context.Context) ([]plextv.RegisteredDevice, error) {
 	return f.devices, f.err
 }
