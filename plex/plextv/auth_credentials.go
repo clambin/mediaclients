@@ -20,7 +20,6 @@ func (c Config) RegisterWithCredentials(ctx context.Context, username, password 
 	resp, err := c.do(ctx, http.MethodPost, c.URL+"/users/sign_in.xml", strings.NewReader(v.Encode()), http.StatusCreated, func(req *http.Request) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Accept", "application/xml")
-		c.Device.populateRequest(req)
 	})
 	if err != nil {
 		return "", fmt.Errorf("register: %w", err)

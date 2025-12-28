@@ -35,10 +35,10 @@ var (
 var _ error = &PlexError{}
 
 type PlexError struct {
-	StatusCode int
+	errors     error
 	Status     string
 	Body       []byte
-	errors     error
+	StatusCode int
 }
 
 func (p *PlexError) Error() string {

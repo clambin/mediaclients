@@ -1,9 +1,7 @@
 package plextv
 
 import (
-	"iter"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -53,25 +51,6 @@ type Device struct {
 
 // populateRequest populates the request headers with the device information.
 func (id Device) populateRequest(req *http.Request) {
-	for key, value := range id.values() {
-		if value != "" {
-			req.Header.Set(key, value)
-		}
-	}
-}
-
-// Query returns the device information as url.Values, suitable for use in a URL query.
-//
-// TODO: exported for now for debugging purpose, but will be unexported for GA.
-func (id Device) Query() url.Values {
-	v := make(url.Values)
-	for key, value := range id.values() {
-		v.Add(key, value)
-	}
-	return v
-}
-
-func (id Device) values() iter.Seq2[string, string] {
 	headers := map[string]string{
 		"X-Plex-Product":          id.Product,
 		"X-Plex-Version":          id.Version,
@@ -83,13 +62,9 @@ func (id Device) values() iter.Seq2[string, string] {
 		"X-Plex-Model":            id.Model,
 		"X-Plex-Provides":         id.Provides,
 	}
-	return func(yield func(string, string) bool) {
-		for key, value := range headers {
-			if value != "" {
-				if !yield(key, value) {
-					return
-				}
-			}
+	for key, value := range headers {
+		if value != "" {
+			req.Header.Set(key, value)
 		}
 	}
 }

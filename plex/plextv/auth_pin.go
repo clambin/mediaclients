@@ -95,9 +95,7 @@ func (c Config) RegisterWithPIN(ctx context.Context, callback func(PINResponse, 
 // Currently only supports strong=false. Support for strong=true is planned, but this requires https://app.plex.tv/auth,
 // which is currently broken.
 func (c Config) PINRequest(ctx context.Context) (PINResponse, string, error) {
-	resp, err := c.do(ctx, http.MethodPost, c.V2URL+"/api/v2/pins" /*?strong=false"*/, nil, http.StatusCreated, func(req *http.Request) {
-		c.Device.populateRequest(req)
-	})
+	resp, err := c.do(ctx, http.MethodPost, c.V2URL+"/api/v2/pins" /*?strong=false"*/, nil, http.StatusCreated)
 	if err != nil {
 		return PINResponse{}, "", fmt.Errorf("pin request: %w", err)
 	}
@@ -113,11 +111,7 @@ func (c Config) PINRequest(ctx context.Context) (PINResponse, string, error) {
 // ValidatePIN checks if the user has confirmed the PINRequest.  It returns the full Plex response.
 // When the user has confirmed the PINRequest, the AuthToken field will be populated.
 func (c Config) ValidatePIN(ctx context.Context, id int) (Token, ValidatePINResponse, error) {
-	resp, err := c.do(ctx, http.MethodGet, c.V2URL+"/api/v2/pins/"+strconv.Itoa(id), nil, http.StatusOK, func(req *http.Request) {
-		// this is only needed once we start using the new response url (https://app.plex.tv/auth),
-		// but leaving it here for now, as it doesn't do any harm.
-		c.Device.populateRequest(req)
-	})
+	resp, err := c.do(ctx, http.MethodGet, c.V2URL+"/api/v2/pins/"+strconv.Itoa(id), nil, http.StatusOK)
 	if err != nil {
 		return "", ValidatePINResponse{}, fmt.Errorf("validate pin: %w", err)
 	}

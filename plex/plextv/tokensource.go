@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+// TokenSource creates a Plex authentication Token.
+type TokenSource interface {
+	Token(ctx context.Context) (Token, error)
+}
+
 // TokenSource returns an [TokenSource] that can be passed to plex.New() to create an authenticated Plex client.
 func (c Config) TokenSource(opts ...TokenSourceOption) TokenSource {
 	cfg := tokenSourceConfiguration{
@@ -23,8 +28,15 @@ func (c Config) TokenSource(opts ...TokenSourceOption) TokenSource {
 	return cfg.tokenSource()
 }
 
-// TokenSourceOption provides the configuration to determine the desired TokenSource.
+// TokenSourceOption provides the configuration to create the desired TokenSource.
 type TokenSourceOption func(*tokenSourceConfiguration)
+
+// WithLogger configures an optional logger.
+func WithLogger(logger *slog.Logger) TokenSourceOption {
+	return func(c *tokenSourceConfiguration) {
+		c.logger = logger
+	}
+}
 
 // WithToken configures a TokenSource to use an existing, fixed token.
 func WithToken(token Token) TokenSourceOption {
@@ -52,13 +64,6 @@ func WithPIN(cb func(PINResponse, string), pollInterval time.Duration) TokenSour
 	}
 }
 
-// WithLogger configures an optional logger.
-func WithLogger(logger *slog.Logger) TokenSourceOption {
-	return func(c *tokenSourceConfiguration) {
-		c.logger = logger
-	}
-}
-
 // WithJWT configures the TokenSource to use a JWT token to request a token.
 //
 // Using JWT requires persistence. storePath is the path to where the secure data will be stored;
@@ -81,11 +86,11 @@ func WithJWT(store JWTSecureDataStore) TokenSourceOption {
 }
 
 type tokenSourceConfiguration struct {
-	config    *Config
 	registrar TokenSource
-	token     Token
+	config    *Config
 	logger    *slog.Logger
 	vault     *jwtDataStore
+	token     Token
 }
 
 func (c tokenSourceConfiguration) tokenSource() TokenSource {
@@ -94,7 +99,7 @@ func (c tokenSourceConfiguration) tokenSource() TokenSource {
 		return fixedTokenSource{token: c.token}
 	}
 
-	// the registrar is the basis of every tokenSource.
+	// the registrar is the basis of every other tokenSource.
 	source := c.registrar
 
 	// If we're using JWT tokens, use jwtTokenSource to register the device (if needed) and get a JWT token.
@@ -113,11 +118,6 @@ func (c tokenSourceConfiguration) tokenSource() TokenSource {
 	}
 }
 
-// TokenSource creates a Plex authentication Token.
-type TokenSource interface {
-	Token(ctx context.Context) (Token, error)
-}
-
 var _ TokenSource = (*tokenSourceFunc)(nil)
 
 // tokenSourceFunc is an adapter to convert a function with the correct signature into an TokenSource.
@@ -130,6 +130,7 @@ func (a tokenSourceFunc) Token(ctx context.Context) (Token, error) {
 var (
 	_ TokenSource = fixedTokenSource{}
 	_ TokenSource = (*cachingTokenSource)(nil)
+	_ TokenSource = (*jwtTokenSource)(nil)
 )
 
 // fixedTokenSource returns a fixed token.

@@ -1,7 +1,6 @@
 package plex
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,8 +21,9 @@ func WithHTTPClient(httpClient *http.Client) Option {
 
 // Client calls a Plex Media Server's API
 type Client struct {
-	httpClient *http.Client
-	url        string
+	httpClient  *http.Client
+	tokenSource *tokenSource
+	url         string
 }
 
 type PlexTVClient interface {
@@ -34,19 +34,17 @@ type PlexTVClient interface {
 // New creates a new Plex client, located at the given URL.
 func New(url string, plexTVClient PlexTVClient, opts ...Option) *Client {
 	client := Client{
-		httpClient: &http.Client{},
 		url:        url,
+		httpClient: http.DefaultClient,
+		tokenSource: &tokenSource{
+			plexTVClient: plexTVClient,
+			url:          url,
+		},
 	}
 	for _, opt := range opts {
 		opt(&client)
 	}
-	client.httpClient.Transport = &authMiddleware{
-		httpClient:   &http.Client{},
-		next:         cmp.Or(client.httpClient.Transport, http.DefaultTransport),
-		url:          url,
-		plexTVClient: plexTVClient,
-	}
-
+	client.tokenSource.httpClient = client.httpClient
 	return &client
 }
 
@@ -55,9 +53,16 @@ type mediaContainer[T any] struct {
 }
 
 func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
+	token, err := c.tokenSource.Token(ctx)
+	if err != nil {
+		var zero T
+		return zero, fmt.Errorf("token: %w", err)
+	}
+
 	var response mediaContainer[T]
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.url+endpoint, nil)
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Plex-Token", token.String())
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -79,43 +84,54 @@ func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
 	return response.MediaContainer, err
 }
 
-type authMiddleware struct {
-	next         http.RoundTripper
-	g            singleflight.Group
+// tokenSource retrieves a Plex Media Server's token.
+//
+// It retrieves the PMS' ClientID using the /identity endpoint (which doesn't need a plex token).
+// Then it lists all registered PMS devices on plex.tv and returns the token of the first one that matches the ClientID.
+type tokenSource struct {
 	httpClient   *http.Client
 	plexTVClient PlexTVClient
 	token        atomic.Pointer[plextv.Token]
+	g            singleflight.Group
 	url          string
 }
 
-func (a *authMiddleware) RoundTrip(req *http.Request) (*http.Response, error) {
-	req = req.Clone(req.Context())
-	token := a.token.Load()
-	if token == nil {
-		// get token
-		tok, err := a.getToken(req.Context())
-		if err != nil {
-			return nil, fmt.Errorf("token: %w", err)
-		}
-		token = &tok
-		a.token.Store(token)
-		// update the device if needed
-		if _, err = a.plexTVClient.User(req.Context()); err != nil {
-			return nil, fmt.Errorf("update device: %w", err)
-		}
+func (t *tokenSource) Token(ctx context.Context) (plextv.Token, error) {
+	if token := t.token.Load(); token != nil {
+		return *token, nil
 	}
-	req.Header.Set("X-Plex-Token", token.String())
-	return a.next.RoundTrip(req)
+
+	tok, err, _ := t.g.Do("pms-token", func() (any, error) {
+		// get the PMS token
+		pmsToken, err := t.pmsToken(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("get pms token: %w", err)
+		}
+
+		// call user endpoint to update the device parameters
+		if _, err = t.plexTVClient.User(ctx); err != nil {
+			return nil, fmt.Errorf("user: %w", err)
+		}
+
+		return pmsToken, nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	token := tok.(plextv.Token)
+	t.token.Store(&token)
+
+	return token, nil
 }
 
-func (a *authMiddleware) getToken(ctx context.Context) (plextv.Token, error) {
-	// get the Plex Media Server's ClientID (machineID)
-	pmsClientID, err := a.getPMSClientID(ctx)
+func (t *tokenSource) pmsToken(ctx context.Context) (plextv.Token, error) {
+	pmsClientID, err := t.pmsClientID(ctx)
 	if err != nil {
 		return "", fmt.Errorf("get pms client id: %w", err)
 	}
 	// get all registered PMS devices
-	devices, err := a.plexTVClient.MediaServers(ctx)
+	devices, err := t.plexTVClient.MediaServers(ctx)
 	if err != nil {
 		return "", fmt.Errorf("media servers: %w", err)
 	}
@@ -128,10 +144,12 @@ func (a *authMiddleware) getToken(ctx context.Context) (plextv.Token, error) {
 	}
 	// if no PMS server is found, return an error
 	return "", fmt.Errorf("pms server not registered")
+
 }
 
-func (a *authMiddleware) getPMSClientID(ctx context.Context) (string, error) {
-	// we can't call Identity() here as it causes an infinite loop, trying to get a token, so we roll our own.
+func (t *tokenSource) pmsClientID(ctx context.Context) (string, error) {
+	// we're in the process of getting a PMS token. So we can't call Identity() here as it would cause an infinite loop.
+	// instead, so we roll our own.
 	type identity struct {
 		MachineIdentifier string `json:"machineIdentifier"`
 		Version           string `json:"version"`
@@ -139,9 +157,9 @@ func (a *authMiddleware) getPMSClientID(ctx context.Context) (string, error) {
 		Claimed           bool   `json:"claimed"`
 	}
 	var response mediaContainer[identity]
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, a.url+"/identity", nil)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, t.url+"/identity", nil)
 	req.Header.Set("Accept", "application/json")
-	resp, err := a.httpClient.Do(req)
+	resp, err := t.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("identity: %w", err)
 	}

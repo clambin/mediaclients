@@ -12,7 +12,7 @@ var (
 	// DefaultConfig contains the default configuration required to authenticate with Plex.
 	defaultHTTPClient = &http.Client{
 		Timeout:   15 * time.Second,
-		Transport: http.DefaultTransport,
+		Transport: http.DefaultTransport.(*http.Transport).Clone(),
 	}
 )
 

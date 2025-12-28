@@ -49,7 +49,7 @@ func (t *Token) IsJWT() bool {
 func (t *Token) IsValid() bool {
 	// parsing each time we validate the token isn't very efficient. currently not an issue as jwt tokens
 	// are not maintained (only needed to get the pms token, which is then cached), but may become an issue.
-	// TODO: PlexTVClient may invalidate that premise.
+	// TODO: Client may invalidate that premise.
 	if t == nil {
 		return false
 	}

@@ -212,7 +212,7 @@ func TestJWTDataStore(t *testing.T) {
 	data.ClientID = "invalid-client-id"
 	_ = v.Save(data)
 
-	got, err = s.Load()
+	_, err = s.Load()
 	if !errors.Is(err, ErrInvalidClientID) {
 		t.Fatalf("expected error, got nil")
 	}

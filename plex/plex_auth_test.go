@@ -11,30 +11,34 @@ import (
 	"github.com/clambin/mediaclients/plex/plextv"
 )
 
-func TestAuthMiddleware(t *testing.T) {
+func Test_tokenSource(t *testing.T) {
 	tests := []struct {
 		name              string
 		machineIdentifier string
 		plexTVClient      fakePlexTVClient
 		pass              bool
+		wantIDCalls       int
 	}{
 		{
 			name:              "valid client ID",
 			machineIdentifier: "pms-1-client-id",
 			plexTVClient:      fakePlexTVClient{devices: []plextv.RegisteredDevice{{ClientID: "pms-1-client-id", Token: "valid-token"}}},
 			pass:              true,
+			wantIDCalls:       1,
 		},
 		{
 			name:              "invalid client ID",
 			machineIdentifier: "pms-2-client-id",
 			plexTVClient:      fakePlexTVClient{devices: []plextv.RegisteredDevice{{ClientID: "pms-1-client-id", Token: "valid-token"}}},
 			pass:              false,
+			wantIDCalls:       2,
 		},
 		{
 			name:              "pms error",
 			machineIdentifier: "pms-1-client-id",
 			plexTVClient:      fakePlexTVClient{err: errors.New("test failure")},
 			pass:              false,
+			wantIDCalls:       2,
 		},
 	}
 
@@ -48,40 +52,31 @@ func TestAuthMiddleware(t *testing.T) {
 					w.WriteHeader(http.StatusOK)
 					_, _ = w.Write([]byte(`{ "MediaContainer": { "machineIdentifier": "` + tt.machineIdentifier + `" } }"`))
 				default:
-					if token := r.Header.Get("X-Plex-Token"); token != "valid-token" {
-						http.Error(w, "invalid token", http.StatusUnauthorized)
-						return
-					}
+					http.NotFound(w, r)
 				}
-
 			}))
+			t.Cleanup(ts.Close)
 
-			client := &http.Client{
-				Transport: &authMiddleware{
-					next:         http.DefaultTransport,
-					httpClient:   &http.Client{},
-					plexTVClient: tt.plexTVClient,
-					url:          ts.URL,
-				},
+			src := &tokenSource{
+				httpClient:   http.DefaultClient,
+				plexTVClient: tt.plexTVClient,
+				url:          ts.URL,
 			}
 
-			for range 3 {
-				req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, ts.URL+"/", nil)
-				resp, err := client.Do(req)
-				if err != nil {
-					if tt.pass {
-						t.Fatalf("unexpected error: %v", err)
+			for range 2 {
+				token, err := src.Token(t.Context())
+				if tt.pass != (err == nil) {
+					t.Fatalf("unexpected err: want pass: %v, got err: %v", tt.pass, err)
+				}
+				if err == nil {
+					if got := token.String(); got == "" {
+						t.Fatal("unexpected empty token")
 					}
-					return
-				}
-				_ = resp.Body.Close()
-				if (resp.StatusCode != http.StatusOK && tt.pass) || (resp.StatusCode == http.StatusOK && !tt.pass) {
-					t.Fatalf("unexpected status code: %d", resp.StatusCode)
 				}
 			}
 
-			if got := identityCalls.Load(); got != 1 {
-				t.Fatalf("expected only one call, got %v", got)
+			if got := int(identityCalls.Load()); got != tt.wantIDCalls {
+				t.Fatalf("unexpected number of identity calls: want %d, got %d", tt.wantIDCalls, got)
 			}
 		})
 	}

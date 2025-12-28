@@ -25,12 +25,13 @@ var fakePlexTVServer = testutils.TestServer{Responses: map[string]testutils.Path
 func TestClient_User(t *testing.T) {
 	ts := httptest.NewServer(&fakePlexTVServer)
 	t.Cleanup(ts.Close)
+	ctx := t.Context()
 
 	cfg := DefaultConfig().WithClientID("client-user")
-	c := cfg.PlexTVClient(WithToken(legacyToken))
+	c := cfg.Client(ctx, cfg.TokenSource(WithToken(legacyToken)))
 	c.config.URL = ts.URL
 
-	user, err := c.User(t.Context())
+	user, err := c.User(ctx)
 	if err != nil {
 		t.Fatalf("User error: %v", err)
 	}
@@ -39,7 +40,7 @@ func TestClient_User(t *testing.T) {
 	}
 
 	ts.Close()
-	if _, err = c.User(t.Context()); err == nil {
+	if _, err = c.User(ctx); err == nil {
 		t.Fatalf("expected error from closed server")
 	}
 }
@@ -47,12 +48,13 @@ func TestClient_User(t *testing.T) {
 func TestClient_RegisteredDevices(t *testing.T) {
 	ts := httptest.NewServer(&fakePlexTVServer)
 	t.Cleanup(ts.Close)
+	ctx := t.Context()
 
 	cfg := DefaultConfig().WithClientID("client-user")
-	c := cfg.PlexTVClient(WithToken(legacyToken))
+	c := cfg.Client(ctx, cfg.TokenSource(WithToken(legacyToken)))
 	c.config.URL = ts.URL
 
-	devs, err := c.RegisteredDevices(t.Context())
+	devs, err := c.RegisteredDevices(ctx)
 	if err != nil {
 		t.Fatalf("RegisteredDevices error: %v", err)
 	}
@@ -61,7 +63,7 @@ func TestClient_RegisteredDevices(t *testing.T) {
 	}
 
 	ts.Close()
-	if _, err = c.RegisteredDevices(t.Context()); err == nil {
+	if _, err = c.RegisteredDevices(ctx); err == nil {
 		t.Fatalf("expected error from closed server")
 	}
 }
@@ -69,12 +71,13 @@ func TestClient_RegisteredDevices(t *testing.T) {
 func TestClient_MediaServers(t *testing.T) {
 	ts := httptest.NewServer(&fakePlexTVServer)
 	t.Cleanup(ts.Close)
+	ctx := t.Context()
 
 	cfg := DefaultConfig().WithClientID("client-user")
-	c := cfg.PlexTVClient(WithToken(legacyToken))
+	c := cfg.Client(ctx, cfg.TokenSource(WithToken(legacyToken)))
 	c.config.URL = ts.URL
 
-	devs, err := c.MediaServers(t.Context())
+	devs, err := c.MediaServers(ctx)
 	if err != nil {
 		t.Fatalf("MediaServers error: %v", err)
 	}
@@ -86,7 +89,7 @@ func TestClient_MediaServers(t *testing.T) {
 	}
 
 	ts.Close()
-	if _, err = c.User(t.Context()); err == nil {
+	if _, err = c.User(ctx); err == nil {
 		t.Fatalf("expected error from closed server")
 	}
 }
