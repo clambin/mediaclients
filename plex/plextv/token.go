@@ -47,21 +47,18 @@ func (t *Token) IsJWT() bool {
 // IsValid returns true if the token is valid.
 // Note: for JWT, the token is valid if it is not expired. The signature, if present, is not verified.
 func (t *Token) IsValid() bool {
-	// parsing each time we validate the token isn't very efficient. currently not an issue as jwt tokens
-	// are not maintained (only needed to get the pms token, which is then cached), but may become an issue.
-	// TODO: Client may invalidate that premise.
 	if t == nil {
 		return false
 	}
+	if t.IsLegacy() {
+		return true
+	}
 	tok, err := t.parseJWT()
-	if err == nil {
-		exp, ok := tok.Expiration()
-		if ok && exp.After(time.Now()) {
-			return true
-		}
+	if err != nil {
 		return false
 	}
-	return t.IsLegacy()
+	exp, ok := tok.Expiration()
+	return ok && exp.After(time.Now())
 }
 
 func (t *Token) parseJWT() (jwt.Token, error) {

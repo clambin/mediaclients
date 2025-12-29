@@ -169,6 +169,17 @@ func BenchmarkCachingTokenSource_Token_LegacyToken(b *testing.B) {
 			}
 		}
 	})
+	b.Run("invalid", func(b *testing.B) {
+		ts := cachingTokenSource{tokenSource: fakeRegistrar{token: "invalid token"}}
+		ctx := context.Background()
+		b.ReportAllocs()
+		for b.Loop() {
+			_, err := ts.Token(ctx)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 var _ TokenSource = fakeRegistrar{}

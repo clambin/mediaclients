@@ -85,7 +85,7 @@ func (c Config) RegisterWithPIN(ctx context.Context, callback func(PINResponse, 
 		select {
 		case <-ctx.Done():
 			return "", ctx.Err()
-		case <-time.After(cmp.Or(pollInterval, 15*time.Second)):
+		case <-time.After(cmp.Or(pollInterval, 5*time.Second)):
 		}
 	}
 }
