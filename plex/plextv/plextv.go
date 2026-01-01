@@ -18,9 +18,12 @@ type Client struct {
 	config     *Config
 }
 
-// Client returns a [Client].
+// Client returns a [Client] that uses the provided [TokenSource] to authenticate itself with plex.tv.
+//
+// The returned client will use the http.Client associated with the provided context to make requests,
+// or a default one if none is set.
 func (c Config) Client(ctx context.Context, src TokenSource) Client {
-	// create a new httpClient to interact with plex.tv, using the same transport.
+	// create a new httpClient to interact with plex.tv.
 	client := &http.Client{
 		Timeout:   15 * time.Second,
 		Transport: httpClient(ctx).Transport,
@@ -89,7 +92,7 @@ func (c Client) MediaServers(ctx context.Context) ([]RegisteredDevice, error) {
 
 var _ http.RoundTripper = (*authMiddleware)(nil)
 
-// authMiddleware adds the X-Plex-Token and X-Plex-Client-Identifier and Plex device headers to outgoing requests.
+// authMiddleware adds the X-Plex-Token, X-Plex-Client-Identifier and Plex device headers to outgoing requests.
 type authMiddleware struct {
 	config      *Config
 	tokenSource TokenSource

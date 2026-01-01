@@ -11,12 +11,13 @@ import (
 	"time"
 )
 
-// TokenSource creates a Plex authentication Token.
+// TokenSource is the common interface for all plex.tv authentication flows.
+// Currently supported flows are username/password, PIN, and JWT.
 type TokenSource interface {
 	Token(ctx context.Context) (Token, error)
 }
 
-// TokenSource returns an [TokenSource] that can be passed to plex.New() to create an authenticated Plex client.
+// TokenSource returns a [TokenSource] in line with the provided TokenSource options.
 func (c Config) TokenSource(opts ...TokenSourceOption) TokenSource {
 	cfg := tokenSourceConfiguration{
 		config: &c,
@@ -180,6 +181,8 @@ type jwtTokenSource struct {
 	secureData JWTSecureData
 	init       untilSuccessful
 }
+
+var _ JWTSecureDataStore = (*jwtDataStore)(nil)
 
 type secureDataVault interface {
 	Load() (JWTSecureData, error)

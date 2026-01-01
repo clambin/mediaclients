@@ -24,6 +24,7 @@ func (l loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 	l.dumpHeader(req.Header)
 	req.Body = l.dumpBody(req.Body)
 	_, _ = fmt.Fprintln(l.w, "--------")
+
 	defer func() { _, _ = fmt.Fprintln(l.w, "\n========") }()
 
 	resp, err := l.next.RoundTrip(req)
@@ -53,15 +54,6 @@ func (l loggingRoundTripper) dumpBody(r io.ReadCloser) io.ReadCloser {
 	var origBody bytes.Buffer
 	r2 := io.TeeReader(r, &origBody)
 	_, _ = io.Copy(l.w, r2)
-	/*
-		body, _ := io.ReadAll(r2)
-		for line := range bytes.Lines(body) {
-			if bytes.HasSuffix(line, []byte("\n")) {
-				line = line[:len(line)-1]
-			}
-			fmt.Println("", string(line))
-		}
-	*/
 	_ = r.Close()
 	return io.NopCloser(&origBody)
 }

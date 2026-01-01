@@ -78,6 +78,11 @@ type Config struct {
 	URL string
 	// V2URL is the base URL of the new Plex authentication endpoint.
 	// Defaults to https://clients.plex.tv and should not need to be changed.
+	//
+	// Note: the [Plex API documentation] is not consistent in its use of https://clients.plex.tv vs https://plex.tv.
+	// The implementation here follows the specifications as much as possible, but changes may be required in the future.
+	//
+	// [Plex API documentation]: https://developer.plex.tv/pms
 	V2URL string
 	// ClientID is the unique identifier of the client application.
 	ClientID string
@@ -95,7 +100,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		URL:      "https://plex.tv",
-		V2URL:    "https://clients.plex.tv", // TODO: do any endpoints mandate clients.plex.tv?
+		V2URL:    "https://clients.plex.tv",
 		Scopes:   []string{"username", "email", "friendly_name", "restricted", "anonymous"},
 		ClientID: uuid.New().String(),
 		aud:      "plex.tv",

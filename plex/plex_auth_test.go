@@ -11,7 +11,7 @@ import (
 	"github.com/clambin/mediaclients/plex/plextv"
 )
 
-func Test_tokenSource(t *testing.T) {
+func Test_plexTVTokenSource(t *testing.T) {
 	tests := []struct {
 		name              string
 		machineIdentifier string
@@ -57,14 +57,10 @@ func Test_tokenSource(t *testing.T) {
 			}))
 			t.Cleanup(ts.Close)
 
-			src := &tokenSource{
-				httpClient:   http.DefaultClient,
-				plexTVClient: tt.plexTVClient,
-				url:          ts.URL,
-			}
+			client := NewPMSClient(ts.URL, tt.plexTVClient)
 
 			for range 2 {
-				token, err := src.Token(t.Context())
+				token, err := client.tokenSource.Token(t.Context())
 				if tt.pass != (err == nil) {
 					t.Fatalf("unexpected err: want pass: %v, got err: %v", tt.pass, err)
 				}
