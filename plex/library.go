@@ -242,7 +242,7 @@ type Episode struct {
 	Duration       int     `json:"duration"`
 }
 
-func (c *Client) GetLibraries(ctx context.Context) ([]Library, error) {
+func (c *PMSClient) GetLibraries(ctx context.Context) ([]Library, error) {
 	type response struct {
 		Directory []Library `json:"Directory"`
 	}
@@ -250,7 +250,7 @@ func (c *Client) GetLibraries(ctx context.Context) ([]Library, error) {
 	return resp.Directory, err
 }
 
-func (c *Client) GetMovies(ctx context.Context, key string) ([]Movie, error) {
+func (c *PMSClient) GetMovies(ctx context.Context, key string) ([]Movie, error) {
 	type response struct {
 		Metadata []Movie `json:"Metadata"`
 	}
@@ -258,7 +258,7 @@ func (c *Client) GetMovies(ctx context.Context, key string) ([]Movie, error) {
 	return resp.Metadata, err
 }
 
-func (c *Client) GetShows(ctx context.Context, key string) ([]Show, error) {
+func (c *PMSClient) GetShows(ctx context.Context, key string) ([]Show, error) {
 	type response struct {
 		Metadata []Show `json:"Metadata"`
 	}
@@ -266,7 +266,7 @@ func (c *Client) GetShows(ctx context.Context, key string) ([]Show, error) {
 	return resp.Metadata, err
 }
 
-func (c *Client) GetSeasons(ctx context.Context, key string) ([]Season, error) {
+func (c *PMSClient) GetSeasons(ctx context.Context, key string) ([]Season, error) {
 	type response struct {
 		Metadata []Season `json:"Metadata"`
 	}
@@ -274,7 +274,7 @@ func (c *Client) GetSeasons(ctx context.Context, key string) ([]Season, error) {
 	return resp.Metadata, err
 }
 
-func (c *Client) GetEpisodes(ctx context.Context, key string) ([]Episode, error) {
+func (c *PMSClient) GetEpisodes(ctx context.Context, key string) ([]Episode, error) {
 	type response struct {
 		Metadata []Episode `json:"Metadata"`
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 // GetSessions retrieves session information from the server.
-func (c *Client) GetSessions(ctx context.Context) ([]Session, error) {
+func (c *PMSClient) GetSessions(ctx context.Context) ([]Session, error) {
 	type response struct {
 		Metadata []Session `json:"Metadata"`
 		Size     int       `json:"size"`
