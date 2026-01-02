@@ -25,7 +25,6 @@ type Device struct {
 	Version string
 	// Platform is the operating system or compiler of the client application.
 	// Passed as X-Plex-Platform header.
-	// In Authorized Devices, it is shown on line 80.
 	Platform string
 	// PlatformVersion is the version of the platform.
 	// Passed as X-Plex-Platform-Version header.
