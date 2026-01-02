@@ -10,16 +10,14 @@ import (
 )
 
 var (
-	// ErrInvalidToken indicates that a Config method was passed an invalid token.
-	ErrInvalidToken = fmt.Errorf("invalid token")
 	// ErrInvalidClientID indicates that the data in a JWTSecureDataStore is for a different Client ID
 	// than the one used to register the device.
 	// The stored private key and public key ID can't be used to generate a new JWT token.
-	// You will need to re-register the device with a new Client ID.
+	// The client needs to re-register the device with a new Client ID.
 	ErrInvalidClientID = fmt.Errorf("data store contains invalid client ID")
 	// ErrNoTokenSource indicates that a token source needs a child token source, but none was provided.
-	// A typical example is JWTTokenSource or PMSTokenSource needing a registrar to get a legacy token,
-	// but none is provided in [Config.TokenSource].
+	// A typical example is JWTTokenSource needing a registrar to get a legacy token, but none is provided in
+	// [Config.TokenSource].
 	ErrNoTokenSource = errors.New("no token source provided")
 	// ErrUnauthorized indicates that plex.tv could not authenticate the user.
 	ErrUnauthorized = errors.New("user could not be authenticated")
@@ -27,12 +25,30 @@ var (
 	// Typically, this only happens when generating a new JWT token.
 	ErrTooManyRequests = errors.New("too many requests")
 	// ErrJWKMissing indicates that the JWT token request could not find a public key to verify the JWT request.
-	// Typically, this means the Registered Device for the associated Client ID has been removed from Plex's Registered Devices.
-	// You will need to re-register the device with a new Client ID and a new public/private key pair.
+	// Typically, this means the Registered Device for the associated Client ID has been removed from
+	// Plex's Registered Devices.
+	// The client needs to re-register the device with a new Client ID and a new public/private key pair.
 	ErrJWKMissing = errors.New("jwk missing. no public key to verify jwt request")
+	// ErrExpiredToken indicates that the provided JWT token has expired.
+	ErrExpiredToken = errors.New("token expired")
 )
 
-var _ error = &PlexError{}
+var _ error = (*ErrInvalidToken)(nil)
+
+// ErrInvalidToken indicates that a Config method was passed an invalid token.
+type ErrInvalidToken struct {
+	err error
+}
+
+func (e *ErrInvalidToken) Error() string {
+	return "invalid token: " + e.err.Error()
+}
+
+func (e *ErrInvalidToken) Unwrap() error {
+	return e.err
+}
+
+var _ error = (*PlexError)(nil)
 
 type PlexError struct {
 	errors     error
@@ -41,16 +57,16 @@ type PlexError struct {
 	StatusCode int
 }
 
-func (p *PlexError) Error() string {
-	txt := p.Status
-	if p.errors != nil {
-		txt = p.errors.Error()
+func (e *PlexError) Error() string {
+	txt := e.Status
+	if e.errors != nil {
+		txt = e.errors.Error()
 	}
 	return "plex: " + txt
 }
 
-func (p *PlexError) Unwrap() error {
-	return p.errors
+func (e *PlexError) Unwrap() error {
+	return e.errors
 }
 
 // TODO: probably more errors that could help users/apps figure out what's going on

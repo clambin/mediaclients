@@ -35,9 +35,8 @@ func (c Config) GenerateAndUploadPublicKey(ctx context.Context, token Token) (ed
 // which can be used to generate a new token with [Config.JWTToken].
 func (c Config) UploadPublicKey(ctx context.Context, publicKey ed25519.PublicKey, token Token) (string, error) {
 	// check we have a valid token
-	// TODO: IsValid should return err, not bool, so the caller can determine the root cause of the error.
-	if !token.IsValid() {
-		return "", ErrInvalidToken
+	if err := token.IsValid(); err != nil {
+		return "", err
 	}
 
 	// create a jwk from the public key

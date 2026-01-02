@@ -79,7 +79,7 @@ func (c Config) RegisterWithPIN(ctx context.Context, callback func(PINResponse, 
 	}
 	callback(pinResponse, pinURL)
 	for {
-		if token, _, err = c.ValidatePIN(ctx, pinResponse.Id); err == nil && token.IsValid() {
+		if token, _, err = c.ValidatePIN(ctx, pinResponse.Id); err == nil && token.IsValid() == nil {
 			return token, nil
 		}
 		select {

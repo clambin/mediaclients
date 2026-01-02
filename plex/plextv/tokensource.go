@@ -159,7 +159,7 @@ func (s *cachingTokenSource) Token(ctx context.Context) (Token, error) {
 
 	// if we have a valid token cached, return it
 	// Note: IsValid parses the token on each call, which is quite expensive. But we must test it here, since a JWT may expire.
-	if s.token != nil && s.token.IsValid() {
+	if s.token != nil && s.token.IsValid() != nil {
 		return *s.token, nil
 	}
 

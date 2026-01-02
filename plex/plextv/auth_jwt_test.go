@@ -24,12 +24,13 @@ func TestConfig_GenerateAndUploadPublicKey(t *testing.T) {
 	}
 
 	// bad token
-	if _, _, err = cfg.GenerateAndUploadPublicKey(ctx, "bad-token"); !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("expected invalid token error")
+	var tokenError *ErrInvalidToken
+	if _, _, err = cfg.GenerateAndUploadPublicKey(ctx, "bad-token"); !errors.As(err, &tokenError) {
+		t.Fatalf("expected invalid token error. got %v", err)
 	}
 
 	// invalid token
-	if _, _, err := cfg.GenerateAndUploadPublicKey(ctx, ""); !errors.Is(err, ErrInvalidToken) {
+	if _, _, err = cfg.GenerateAndUploadPublicKey(ctx, ""); !errors.As(err, &tokenError) {
 		t.Fatalf("expected ErrInvalidToken from empty token, got: %v", err)
 	}
 

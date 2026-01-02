@@ -90,3 +90,16 @@ func TestPlexError_Unwrap(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestErrInvalidToken(t *testing.T) {
+	err := &ErrInvalidToken{err: ErrExpiredToken}
+
+	const want = "invalid token: token expired"
+	if got := err.Error(); got != want {
+		t.Fatalf("unexpected error string: want %v, got %v", want, got)
+	}
+
+	if !errors.Is(err, ErrExpiredToken) {
+		t.Fatal("expected error")
+	}
+}

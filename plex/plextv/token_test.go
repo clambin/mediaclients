@@ -60,7 +60,7 @@ func TestToken(t *testing.T) {
 			if got := tt.token.IsJWT(); got != tt.wantIsJWT {
 				t.Errorf("Token.IsJWT() = %v, want %v", got, tt.wantIsJWT)
 			}
-			if got := tt.token.IsValid(); got != tt.wantValid {
+			if got := tt.token.IsValid(); tt.wantValid != (got == nil) {
 				t.Errorf("Token.IsValid() = %v, want %v", got, tt.wantValid)
 			}
 		})
