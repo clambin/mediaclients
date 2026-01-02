@@ -1,0 +1,203 @@
+// Package vault provides a simple means of storing secure data on disk.
+// Data at rest is encrypted using AES-256-GCM, using a salted hash.
+package vault
+
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"sync"
+
+	"golang.org/x/crypto/hkdf"
+)
+
+const (
+	currentVersion = 1
+)
+
+var (
+	// hash function to use for deriving the encryption key
+	hash = sha256.New
+	// size of the salt to use for deriving the encryption key
+	saltSize = hash().Size()
+)
+
+type ErrDecryptionFailed struct {
+	Err error
+}
+
+func (e *ErrDecryptionFailed) Error() string {
+	if e.Err != nil {
+		return "invalid key: " + e.Err.Error()
+	}
+	return "invalid key"
+}
+
+func (e *ErrDecryptionFailed) Unwrap() error {
+	return e.Err
+}
+
+type Vault[T any] struct {
+	content    *T
+	passphrase string
+	filePath   string
+	lock       sync.Mutex
+}
+
+func New[T any](filePath string, passphrase string) *Vault[T] {
+	return &Vault[T]{
+		filePath:   filePath,
+		passphrase: passphrase,
+	}
+}
+
+func (c *Vault[T]) Load() (T, error) {
+	var v T
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// if we have the content cached, return it
+	if c.content != nil {
+		return *c.content, nil
+	}
+
+	// read the file
+	data, err := os.ReadFile(c.filePath)
+	if err != nil {
+		return v, err
+	}
+
+	// determine file version
+	var versionReq map[string]any
+	if err = json.Unmarshal(data, &versionReq); err != nil {
+		return v, fmt.Errorf("unrecognized file format: %w", err)
+	}
+	version, ok := versionReq["version"].(float64)
+	if !ok {
+		return v, fmt.Errorf("unrecognized file format: missing version")
+	}
+	// decode the file based on the version
+	var record content
+	switch int(version) {
+	case currentVersion:
+		// we already know the content is decodable
+		_ = json.Unmarshal(data, &record)
+	default:
+		return v, fmt.Errorf("unsupported version %d", int(version))
+	}
+
+	// decrypt the data
+	encryptionKey, _ := deriveEncryptionKey(c.passphrase, record.Salt)
+	clearData, err := decryptAES(record.Data, encryptionKey)
+	if err != nil {
+		return v, &ErrDecryptionFailed{Err: err}
+	}
+
+	// decode the data
+	if err = json.Unmarshal(clearData, &v); err != nil {
+		return v, fmt.Errorf("decode data: %w", err)
+	}
+	c.content = &v
+	return v, nil
+}
+
+func (c *Vault[T]) Save(v T) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// record to write to disk
+	var record = content{
+		Version: currentVersion,
+		Salt:    make([]byte, saltSize),
+	}
+
+	// generate a new random salt
+	if _, err := rand.Read(record.Salt); err != nil {
+		return fmt.Errorf("generate salt: %w", err)
+	}
+
+	// encode the data
+	body, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Errorf("encode data: %w", err)
+	}
+
+	// encrypt the data
+	encryptionKey, _ := deriveEncryptionKey(c.passphrase, record.Salt)
+	if record.Data, err = encryptAES(body, encryptionKey); err != nil {
+		return fmt.Errorf("encrypt record data: %w", err)
+	}
+
+	// encode the record
+	if body, err = json.MarshalIndent(record, "", "  "); err != nil {
+		return fmt.Errorf("encode record: %w", err)
+	}
+
+	// write the file
+	if err = os.WriteFile(c.filePath, body, 0600); err != nil {
+		return fmt.Errorf("write file: %w", err)
+	}
+
+	// cache the content for reading
+	c.content = &v
+
+	return nil
+}
+
+type content struct {
+	Salt    []byte `json:"salt"`
+	Data    []byte `json:"data"`
+	Version int    `json:"version"`
+}
+
+// deriveKey generates the encryption key from a passphrase and a salt value
+func deriveEncryptionKey(passphrase string, salt []byte) ([]byte, error) {
+	r := hkdf.New(hash, []byte(passphrase), salt, nil)
+	key := make([]byte, 32)
+	_, err := io.ReadFull(r, key)
+	return key, err
+}
+
+// AES encryption
+func encryptAES(data []byte, key []byte) ([]byte, error) {
+	aesGCM, err := initAES(key)
+	if err != nil {
+		return nil, err
+	}
+
+	nonce := make([]byte, aesGCM.NonceSize())
+	if _, err = rand.Read(nonce); err != nil {
+		return nil, err
+	}
+	return aesGCM.Seal(nonce, nonce, data, nil), nil
+}
+
+// AES decryption
+func decryptAES(data []byte, key []byte) ([]byte, error) {
+	aesGCM, err := initAES(key)
+	if err != nil {
+		return nil, err
+	}
+
+	nonceSize := aesGCM.NonceSize()
+	if len(data) < nonceSize {
+		return nil, errors.New("invalid ciphertext")
+	}
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+
+	return aesGCM.Open(nil, nonce, ciphertext, nil)
+}
+
+func initAES(key []byte) (cipher.AEAD, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	return cipher.NewGCM(block)
+}

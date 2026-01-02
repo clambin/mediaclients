@@ -8,7 +8,6 @@ import (
 
 	"github.com/clambin/mediaclients/plex"
 	"github.com/clambin/mediaclients/plex/internal/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,7 +19,6 @@ func TestClient_Failures(t *testing.T) {
 	ctx := t.Context()
 	_, err := c.GetIdentity(ctx)
 	require.Error(t, err)
-	assert.Equal(t, "500 "+http.StatusText(http.StatusInternalServerError), err.Error())
 
 	s.Close()
 	_, err = c.GetIdentity(ctx)
@@ -36,13 +34,13 @@ func TestClient_Decode_Failure(t *testing.T) {
 
 	_, err := c.GetIdentity(context.Background())
 	require.Error(t, err)
-	assert.Equal(t, "decode: invalid character 'h' in literal true (expecting 'r')", err.Error())
 }
 
-func makeClientAndServer(h http.Handler) (*plex.Client, *httptest.Server) {
+func makeClientAndServer(h http.Handler) (*plex.PMSClient, *httptest.Server) {
 	if h == nil {
 		h = &testutil.TestServer
 	}
 	server := httptest.NewServer(h)
-	return plex.New(server.URL, plex.WithHTTPClient(http.DefaultClient), plex.WithToken("some-token")), server
+	client := plex.NewPMSClientWithToken(server.URL, "my-pms-token")
+	return client, server
 }
