@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
 	"time"
 )
@@ -111,7 +112,6 @@ func (a *authMiddleware) RoundTrip(r *http.Request) (*http.Response, error) {
 	return a.next.RoundTrip(r)
 }
 
-/*
 // Resources returns all resources (mainly Plex Media Servers) visible for the current token.
 //
 // Use values to filter the results. According to the [Plex API documentation], the following values are supported:
@@ -130,9 +130,9 @@ func (c Client) Resources(ctx context.Context, values url.Values) ([]Resource, e
 	if len(values) > 0 {
 		target += "?" + values.Encode()
 	}
-	resp, err := c.doWithToken(ctx, http.MethodGet, target, nil, http.StatusOK, func(req *http.Request) {
-		c.config.Device.populateRequest(req)
-	})
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.config.V2URL+"/api/v2/resources", nil)
+	req.Header.Set("Accept", "application/json")
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -143,6 +143,7 @@ func (c Client) Resources(ctx context.Context, values url.Values) ([]Resource, e
 	return resources, nil
 }
 
+/*
 // Devices return all devices visible for the current token. It's the response to /api/v2/devices endpoint.
 func (c Client) Devices(ctx context.Context, values url.Values) ([]PlexTVDevice, error) {
 	target := c.config.V2URL + "/api/v2/devices"

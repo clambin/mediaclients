@@ -257,15 +257,7 @@ func (h *jwtHandler) handleJWK(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if len(keySet.Keys()) == 0 {
-		http.Error(w, "invalid jwk: no key found", http.StatusBadRequest)
-		return
-	}
-	var kid string
-	if err = keySet.Get("kid", &kid); err != nil || kid == "" {
-		http.Error(w, "invalid jwk: no key id found", http.StatusBadRequest)
-		return
-	}
+
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	if h.keySets == nil {
