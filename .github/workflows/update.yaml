@@ -18,7 +18,7 @@ jobs:
           BUMP=$(go run internal/bump/bump.go)
           echo "Changes: $BUMP"
           echo "changes=$BUMP" >> $GITHUB_OUTPUT
-          go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
+          go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
           go generate ./...
         shell: bash
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
