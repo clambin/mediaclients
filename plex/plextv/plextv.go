@@ -130,7 +130,7 @@ func (c Client) Resources(ctx context.Context, values url.Values) ([]Resource, e
 	if len(values) > 0 {
 		target += "?" + values.Encode()
 	}
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.config.V2URL+"/api/v2/resources", nil)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	req.Header.Set("Accept", "application/json")
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
