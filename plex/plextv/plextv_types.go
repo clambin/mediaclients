@@ -8,6 +8,36 @@ import (
 
 // User represents a Plex TV user. It is the response from the /api/v2/user endpoint.
 type User struct {
+	Locale                  interface{} `json:"locale"`
+	AttributionPartner      interface{} `json:"attributionPartner"`
+	Uuid                    string      `json:"uuid"`
+	Username                string      `json:"username"`
+	Title                   string      `json:"title"`
+	Email                   string      `json:"email"`
+	FriendlyName            string      `json:"friendlyName"`
+	Thumb                   string      `json:"thumb"`
+	AuthToken               string      `json:"authToken"`
+	MailingListStatus       string      `json:"mailingListStatus"`
+	ScrobbleTypes           string      `json:"scrobbleTypes"`
+	Country                 string      `json:"country"`
+	SubscriptionDescription string      `json:"subscriptionDescription"`
+	Entitlements            []string    `json:"entitlements"`
+	Roles                   []string    `json:"roles"`
+	Services                []struct {
+		Identifier string  `json:"identifier"`
+		Endpoint   string  `json:"endpoint"`
+		Token      *string `json:"token"`
+		Secret     *string `json:"secret"`
+		Status     string  `json:"status"`
+	} `json:"services"`
+	Subscription struct {
+		SubscribedAt   time.Time `json:"subscribedAt"`
+		Status         string    `json:"status"`
+		PaymentService string    `json:"paymentService"`
+		Plan           string    `json:"plan"`
+		Features       []string  `json:"features"`
+		Active         bool      `json:"active"`
+	} `json:"subscription"`
 	Profile struct {
 		DefaultAudioLanguages        interface{} `json:"defaultAudioLanguages"`
 		DefaultSubtitleLanguages     interface{} `json:"defaultSubtitleLanguages"`
@@ -22,36 +52,6 @@ type User struct {
 		MediaReviewsVisibility       int         `json:"mediaReviewsVisibility"`
 		AutoSelectAudio              bool        `json:"autoSelectAudio"`
 	} `json:"profile"`
-	Locale                  interface{} `json:"locale"`
-	AttributionPartner      interface{} `json:"attributionPartner"`
-	Uuid                    string      `json:"uuid"`
-	Username                string      `json:"username"`
-	Title                   string      `json:"title"`
-	Email                   string      `json:"email"`
-	FriendlyName            string      `json:"friendlyName"`
-	Thumb                   string      `json:"thumb"`
-	AuthToken               string      `json:"authToken"`
-	MailingListStatus       string      `json:"mailingListStatus"`
-	ScrobbleTypes           string      `json:"scrobbleTypes"`
-	Country                 string      `json:"country"`
-	SubscriptionDescription string      `json:"subscriptionDescription"`
-	Subscription            struct {
-		SubscribedAt   time.Time `json:"subscribedAt"`
-		Status         string    `json:"status"`
-		PaymentService string    `json:"paymentService"`
-		Plan           string    `json:"plan"`
-		Features       []string  `json:"features"`
-		Active         bool      `json:"active"`
-	} `json:"subscription"`
-	Entitlements []string `json:"entitlements"`
-	Roles        []string `json:"roles"`
-	Services     []struct {
-		Identifier string  `json:"identifier"`
-		Endpoint   string  `json:"endpoint"`
-		Token      *string `json:"token"`
-		Secret     *string `json:"secret"`
-		Status     string  `json:"status"`
-	} `json:"services"`
 	Id                   int  `json:"id"`
 	JoinedAt             int  `json:"joinedAt"`
 	HomeSize             int  `json:"homeSize"`
