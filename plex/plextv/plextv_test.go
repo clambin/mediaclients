@@ -8,19 +8,17 @@ import (
 	"codeberg.org/clambin/go-common/testutils"
 )
 
-const (
-	devicesResponse = `<?xml version="1.0" encoding="UTF-8"?>
-<MediaContainer publicAddress="81.164.72.79">
-  <Device name="device-1" product="product-1" clientIdentifier="client-id-1" token="token-00000000000001"></Device>
-  <Device name="device-2" product="product-2" clientIdentifier="client-id-2" token="token-00000000000002"></Device>
-  <Device name="device-3" product="Plex Media Server" clientIdentifier="client-id-3" token="token-00000000000003"></Device>
-</MediaContainer>`
+var (
+	devicesResponse = []Device{
+		{Name: "my device #1", Token: "token-00000000000001", Product: "Plex Media Server", ClientIdentifier: "client-00000000000001"},
+		{Name: "my device #2", Token: "token-00000000000002"},
+		{Name: "my device #3", Token: "token-00000000000003"},
+	}
+	fakePlexTVServer = testutils.TestServer{Responses: map[string]testutils.PathResponse{
+		"/api/v2/user":    {http.MethodGet: testutils.Response{Body: User{Username: "user"}, StatusCode: http.StatusOK}},
+		"/api/v2/devices": {http.MethodGet: testutils.Response{Body: devicesResponse, StatusCode: http.StatusOK}},
+	}}
 )
-
-var fakePlexTVServer = testutils.TestServer{Responses: map[string]testutils.PathResponse{
-	"/api/v2/user": {http.MethodGet: testutils.Response{Body: User{Username: "user"}, StatusCode: http.StatusOK}},
-	"/devices.xml": {http.MethodGet: testutils.Response{Body: devicesResponse, StatusCode: http.StatusOK}},
-}}
 
 func TestClient_User(t *testing.T) {
 	ts := httptest.NewServer(&fakePlexTVServer)
@@ -28,8 +26,9 @@ func TestClient_User(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := DefaultConfig().WithClientID("client-user")
+	cfg.URL = ts.URL
+	cfg.V2URL = ts.URL
 	c := cfg.Client(ctx, cfg.TokenSource(WithToken(legacyToken)))
-	c.config.URL = ts.URL
 
 	user, err := c.User(ctx)
 	if err != nil {
@@ -45,25 +44,27 @@ func TestClient_User(t *testing.T) {
 	}
 }
 
-func TestClient_RegisteredDevices(t *testing.T) {
+func TestClient_Devices(t *testing.T) {
 	ts := httptest.NewServer(&fakePlexTVServer)
 	t.Cleanup(ts.Close)
 	ctx := t.Context()
 
 	cfg := DefaultConfig().WithClientID("client-user")
+	cfg.URL = ts.URL
+	cfg.V2URL = ts.URL
 	c := cfg.Client(ctx, cfg.TokenSource(WithToken(legacyToken)))
-	c.config.URL = ts.URL
+	//c.config.URL = ts.URL
 
-	devs, err := c.RegisteredDevices(ctx)
+	devs, err := c.Devices(ctx, nil)
 	if err != nil {
-		t.Fatalf("RegisteredDevices error: %v", err)
+		t.Fatalf("Devices error: %v", err)
 	}
 	if got := len(devs); got != 3 {
 		t.Fatalf("expected 3 devices, got %d", len(devs))
 	}
 
 	ts.Close()
-	if _, err = c.RegisteredDevices(ctx); err == nil {
+	if _, err = c.Devices(ctx, nil); err == nil {
 		t.Fatalf("expected error from closed server")
 	}
 }
@@ -74,8 +75,9 @@ func TestClient_MediaServers(t *testing.T) {
 	ctx := t.Context()
 
 	cfg := DefaultConfig().WithClientID("client-user")
+	cfg.URL = ts.URL
+	cfg.V2URL = ts.URL
 	c := cfg.Client(ctx, cfg.TokenSource(WithToken(legacyToken)))
-	c.config.URL = ts.URL
 
 	devs, err := c.MediaServers(ctx)
 	if err != nil {
@@ -84,8 +86,9 @@ func TestClient_MediaServers(t *testing.T) {
 	if got := len(devs); got != 1 {
 		t.Fatalf("expected 1 devices, got %d", len(devs))
 	}
-	if got := devs[0].ClientID; got != "client-id-3" {
-		t.Fatalf("unexpected client ID: %s", got)
+	want := "client-00000000000001"
+	if got := devs[0].ClientIdentifier; got != want {
+		t.Fatalf("unexpected client ID. want: %s, got: %s", want, got)
 	}
 
 	ts.Close()

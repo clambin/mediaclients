@@ -12,7 +12,7 @@ import (
 // config contains the attributes that will be registered for the device with the provided client id.
 var config = plextv.DefaultConfig().
 	WithClientID("my-unique-client-id").
-	WithDevice(plextv.Device{
+	WithDevice(plextv.DeviceInformation{
 		Product:         "my product",
 		Version:         "v0.0.4",
 		Platform:        "my platform",

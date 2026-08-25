@@ -3,7 +3,7 @@ Package plex provides a client for interacting with a Plex Media Server.
 
 This package provides several ways to authenticate with a Plex Media Server:
 
- 1. NewPMSClientWithToken creates a new Plex client using a given token. See [Finding an authentication token / X-Plex-Token].
+ 1. New creates a new Plex client using a given token. See [Finding an authentication token / X-Plex-Token].
  2. NewPMSClient creates a new Plex client using plex.tv to authenticate itself.
 
 The second option uses the [plextv] package to retrieve a token. It supports both the new (recommended) JWT authentication flow,

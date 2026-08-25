@@ -47,7 +47,7 @@ func (c Config) do(ctx context.Context, method string, url string, body io.Reade
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Accept-Language", "en-US")
 	req.Header.Set("X-Plex-Client-Identifier", c.ClientID)
-	c.Device.populateRequest(req)
+	c.Device.addDeviceHeaders(req)
 	for _, formatter := range formatters {
 		formatter(req)
 	}

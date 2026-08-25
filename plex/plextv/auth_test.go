@@ -8,7 +8,7 @@ import (
 )
 
 func TestConfig_WithClientIDAndDevice(t *testing.T) {
-	cfg := DefaultConfig().WithClientID("abc").WithDevice(Device{Product: "X"})
+	cfg := DefaultConfig().WithClientID("abc").WithDevice(DeviceInformation{Product: "X"})
 	if cfg.ClientID != "abc" {
 		t.Fatalf("expected client id to be set")
 	}

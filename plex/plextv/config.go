@@ -7,14 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// Device identifies the client when using Plex username/password credentials.
+// DeviceInformation provides information about the client application.
 // Although this package provides a default, it is recommended to set this yourself.
 //
-// Limitation: currently the Device attributes are only registered when the device is registered
-// (during [Config.RegisterWithCredentials] or [Config.RegisterWithPIN]).  If the attributes change
-// after registration (e.g., the Version is updated), this is not (yet) reflected in the registered
-// device on plex.tv.
-type Device struct {
+// The DeviceInformation attributes are registered centrally when the device is registered
+// (during [Config.RegisterWithCredentials] or [Config.RegisterWithPIN]).
+// To update the attributes after registration (e.g., the Version is updated), use [Client.User].
+type DeviceInformation struct {
 	// Product is the name of the client product.
 	// Passed as X-Plex-Product header.
 	// In Authorized Devices, it is shown on line 3.
@@ -48,8 +47,8 @@ type Device struct {
 	Provides string
 }
 
-// populateRequest populates the request headers with the device information.
-func (id Device) populateRequest(req *http.Request) {
+// addDeviceHeaders populates the request headers with the device information.
+func (id DeviceInformation) addDeviceHeaders(req *http.Request) {
 	headers := map[string]string{
 		"X-Plex-Product":          id.Product,
 		"X-Plex-Version":          id.Version,
@@ -68,10 +67,10 @@ func (id Device) populateRequest(req *http.Request) {
 	}
 }
 
-// Config contains the configuration required to authenticate with Plex.
+// Config contains the configuration required to authenticate with PlexTV.
 type Config struct {
 	// Device information used during username/password authentication.
-	Device Device
+	Device DeviceInformation
 	// URL is the base URL of the legacy Plex authentication endpoint.
 	// Defaults to https://plex.tv and should not need to be changed.
 	URL string
@@ -115,13 +114,13 @@ func (c Config) WithClientID(clientID string) Config {
 
 // WithDevice sets the device information used during username/password and pin authentication.
 //
-// See the [Device] type for details on what each field means.
+// See the [DeviceInformation] type for details on what each field means.
 //
-// Limitation: currently the Device attributes are only registered when the device is registered
+// Limitation: currently the DeviceInformation attributes are only registered when the device is registered
 // // (during [Config.RegisterWithCredentials] or [Config.RegisterWithPIN]).  If the attributes change
 // // after registration (e.g., the Version is updated), this is not (yet) reflected in the registered
 // // device on plex.tv.
-func (c Config) WithDevice(device Device) Config {
+func (c Config) WithDevice(device DeviceInformation) Config {
 	c.Device = device
 	return c
 }

@@ -25,7 +25,7 @@ var (
 	// Typically, this only happens when generating a new JWT token.
 	ErrTooManyRequests = errors.New("too many requests")
 	// ErrJWKMissing indicates that the JWT token request could not find a public key to verify the JWT request.
-	// Typically, this means the Registered Device for the associated Client ID has been removed from
+	// Typically, this means the Registered DeviceInformation for the associated Client ID has been removed from
 	// Plex's Registered Devices.
 	// The client needs to re-register the device with a new Client ID and a new public/private key pair.
 	ErrJWKMissing = errors.New("jwk missing. no public key to verify jwt request")

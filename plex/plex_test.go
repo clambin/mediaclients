@@ -36,11 +36,11 @@ func TestClient_Decode_Failure(t *testing.T) {
 	require.Error(t, err)
 }
 
-func makeClientAndServer(h http.Handler) (*plex.PMSClient, *httptest.Server) {
+func makeClientAndServer(h http.Handler) (*plex.Client, *httptest.Server) {
 	if h == nil {
 		h = &testutil.TestServer
 	}
 	server := httptest.NewServer(h)
-	client := plex.NewPMSClientWithToken(server.URL, "my-pms-token")
+	client := plex.New(server.URL, "my-pms-token")
 	return client, server
 }

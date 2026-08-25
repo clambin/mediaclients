@@ -6,18 +6,6 @@ import (
 	"time"
 )
 
-// PlexTimestamp is a custom type for parsing Plex timestamps. It's mainly used by legacy API endpoints.
-type PlexTimestamp time.Time
-
-func (t *PlexTimestamp) UnmarshalXMLAttr(attr xml.Attr) error {
-	epoc, err := strconv.ParseInt(attr.Value, 10, 64)
-	if err != nil {
-		return err
-	}
-	*t = PlexTimestamp(time.Unix(epoc, 0))
-	return nil
-}
-
 // User represents a Plex TV user. It is the response from the /api/v2/user endpoint.
 type User struct {
 	Profile struct {
@@ -87,8 +75,49 @@ type User struct {
 	BackupCodesCreated   bool `json:"backupCodesCreated"`
 }
 
-// PlexTVDevice represents a device registered on PlexTV. It is the response from the /api/v2/devices endpoint.
-type PlexTVDevice struct {
+// Resource represents a registered device on Plex. It's the response to /api/v2/resources endpoint.
+//
+// Use the AccessToken to interact with the PMS instance and the list of connection URLs to locate it.
+// Connections labeled as local should be preferred over those that are not,
+// and relay should only be used as a last resort as bandwidth on relay connections is limited.
+type Resource struct {
+	CreatedAt        time.Time   `json:"createdAt"`
+	LastSeenAt       time.Time   `json:"lastSeenAt"`
+	OwnerId          interface{} `json:"ownerId"`
+	SourceTitle      interface{} `json:"sourceTitle"`
+	Name             string      `json:"name"`
+	Product          string      `json:"product"`
+	ProductVersion   string      `json:"productVersion"`
+	Platform         string      `json:"platform"`
+	PlatformVersion  string      `json:"platformVersion"`
+	Device           string      `json:"device"`
+	ClientIdentifier string      `json:"clientIdentifier"`
+	Provides         string      `json:"provides"`
+	PublicAddress    string      `json:"publicAddress"`
+	AccessToken      string      `json:"accessToken"`
+	Connections      []struct {
+		Protocol string `json:"protocol"`
+		Address  string `json:"address"`
+		Uri      string `json:"uri"`
+		Port     int    `json:"port"`
+		Local    bool   `json:"local"`
+		Relay    bool   `json:"relay"`
+		IPv6     bool   `json:"IPv6"`
+	} `json:"connections"`
+	SearchEnabled          bool `json:"searchEnabled"`
+	Owned                  bool `json:"owned"`
+	Home                   bool `json:"home"`
+	Synced                 bool `json:"synced"`
+	Relay                  bool `json:"relay"`
+	Presence               bool `json:"presence"`
+	HttpsRequired          bool `json:"httpsRequired"`
+	PublicAddressMatches   bool `json:"publicAddressMatches"`
+	DnsRebindingProtection bool `json:"dnsRebindingProtection"`
+	NatLoopbackSupported   bool `json:"natLoopbackSupported"`
+}
+
+// Device represents a device registered on PlexTV. It is the response from the /api/v2/devices endpoint.
+type Device struct {
 	CreatedAt        time.Time `json:"createdAt"`
 	LastSeenAt       time.Time `json:"lastSeenAt"`
 	Platform         *string   `json:"platform"`
@@ -153,43 +182,14 @@ type SyncList struct {
 	Version       int `xml:"version,attr"`
 }
 
-// Resource represents a registered device on Plex. It's the response to /api/v2/resources endpoint.
-//
-// Use the AccessToken to interact with the PMS instance and the list of connection URLs to locate it.
-// Connections labeled as local should be preferred over those that are not,
-// and relay should only be used as a last resort as bandwidth on relay connections is limited.
-type Resource struct {
-	CreatedAt        time.Time   `json:"createdAt"`
-	LastSeenAt       time.Time   `json:"lastSeenAt"`
-	OwnerId          interface{} `json:"ownerId"`
-	SourceTitle      interface{} `json:"sourceTitle"`
-	Name             string      `json:"name"`
-	Product          string      `json:"product"`
-	ProductVersion   string      `json:"productVersion"`
-	Platform         string      `json:"platform"`
-	PlatformVersion  string      `json:"platformVersion"`
-	Device           string      `json:"device"`
-	ClientIdentifier string      `json:"clientIdentifier"`
-	Provides         string      `json:"provides"`
-	PublicAddress    string      `json:"publicAddress"`
-	AccessToken      string      `json:"accessToken"`
-	Connections      []struct {
-		Protocol string `json:"protocol"`
-		Address  string `json:"address"`
-		Uri      string `json:"uri"`
-		Port     int    `json:"port"`
-		Local    bool   `json:"local"`
-		Relay    bool   `json:"relay"`
-		IPv6     bool   `json:"IPv6"`
-	} `json:"connections"`
-	SearchEnabled          bool `json:"searchEnabled"`
-	Owned                  bool `json:"owned"`
-	Home                   bool `json:"home"`
-	Synced                 bool `json:"synced"`
-	Relay                  bool `json:"relay"`
-	Presence               bool `json:"presence"`
-	HttpsRequired          bool `json:"httpsRequired"`
-	PublicAddressMatches   bool `json:"publicAddressMatches"`
-	DnsRebindingProtection bool `json:"dnsRebindingProtection"`
-	NatLoopbackSupported   bool `json:"natLoopbackSupported"`
+// PlexTimestamp is a custom type for parsing Plex timestamps. It's mainly used by legacy API endpoints.
+type PlexTimestamp time.Time
+
+func (t *PlexTimestamp) UnmarshalXMLAttr(attr xml.Attr) error {
+	epoc, err := strconv.ParseInt(attr.Value, 10, 64)
+	if err != nil {
+		return err
+	}
+	*t = PlexTimestamp(time.Unix(epoc, 0))
+	return nil
 }

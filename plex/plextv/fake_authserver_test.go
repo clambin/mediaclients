@@ -22,7 +22,7 @@ const legacyToken = "12345678901234567890"
 
 var baseConfig = DefaultConfig().
 	WithClientID("abc").
-	WithDevice(Device{
+	WithDevice(DeviceInformation{
 		Product:         "TestProduct",
 		Version:         "1.0",
 		Platform:        "unit",
