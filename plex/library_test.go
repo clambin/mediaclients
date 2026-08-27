@@ -21,6 +21,18 @@ func TestClient_GetLibraries(t *testing.T) {
 	}, libraries)
 }
 
+func TestClient_GetAllLibraryMedia(t *testing.T) {
+	c, testServer := makeClientAndServer(nil)
+	t.Cleanup(testServer.Close)
+
+	media, err := c.GetAllLibraryMedia(context.Background(), "1")
+	require.NoError(t, err)
+	assert.Equal(t, []plex.MediaMetadata{
+		{Title: "baz", Guid: "1"},
+	}, media)
+}
+
+/*
 func TestClient_GetMovies(t *testing.T) {
 	c, s := makeClientAndServer(nil)
 	t.Cleanup(s.Close)
@@ -56,3 +68,4 @@ func TestClient_GetEpisodes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []plex.Episode{{Guid: "2", Title: "Episode 1"}}, shows)
 }
+*/

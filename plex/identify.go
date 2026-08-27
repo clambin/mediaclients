@@ -12,5 +12,12 @@ type Identity struct {
 
 // GetIdentity calls Plex' /identity endpoint. Mainly useful to get the server's version.
 func (c *Client) GetIdentity(ctx context.Context) (Identity, error) {
-	return call[Identity](ctx, c, "/identity")
+	type response struct {
+		MediaContainer Identity `json:"MediaContainer"`
+	}
+	resp, err := call[response](ctx, c, "/identity")
+	if err != nil {
+		return Identity{}, err
+	}
+	return resp.MediaContainer, nil
 }

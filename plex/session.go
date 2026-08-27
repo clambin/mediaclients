@@ -11,11 +11,13 @@ import (
 // GetSessions retrieves session information from the server.
 func (c *Client) GetSessions(ctx context.Context) ([]Session, error) {
 	type response struct {
-		Metadata []Session `json:"Metadata"`
-		Size     int       `json:"size"`
+		MediaContainer struct {
+			Size     int       `json:"size"`
+			Metadata []Session `json:"Metadata"`
+		} `json:"MediaContainer"`
 	}
 	resp, err := call[response](ctx, c, "/status/sessions")
-	return resp.Metadata, err
+	return resp.MediaContainer.Metadata, err
 }
 
 // Session contains one record in a Sessions

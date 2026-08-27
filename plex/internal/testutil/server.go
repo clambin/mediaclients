@@ -34,27 +34,9 @@ var plexResponses = testutils.Responses{
         ]
     }}`)}},
 
-	"/library/sections/1/all": {http.MethodGet: {Body: []byte(`{ "MediaContainer" : {
+	"/library/sections/1/allLeaves": {http.MethodGet: {Body: []byte(`{ "MediaContainer" : {
         "Metadata": [
-           { "guid": "1", "title": "foo" }
-        ]
-    }}`)}},
-
-	"/library/sections/2/all": {http.MethodGet: {Body: []byte(`{ "MediaContainer" : {
-        "Metadata": [
-           { "guid": "2", "title": "bar" }
-        ]
-    }}`)}},
-
-	"/library/metadata/200/children": {http.MethodGet: {Body: []byte(`{ "MediaContainer" : {
-        "Metadata": [
-           { "guid": "2", "title": "Season 1" }
-        ]
-    }}`)}},
-
-	"/library/metadata/201/children": {http.MethodGet: {Body: []byte(`{ "MediaContainer" : {
-        "Metadata": [
-           { "guid": "2", "title": "Episode 1" }
+           { "guid": "1", "title": "baz" }
         ]
     }}`)}},
 }

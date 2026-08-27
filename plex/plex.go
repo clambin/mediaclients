@@ -35,19 +35,16 @@ func New(url string, token string, opts ...Option) *Client {
 	return &client
 }
 
-type mediaContainer[T any] struct {
-	MediaContainer T `json:"MediaContainer"`
-}
-
 func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
-	var response mediaContainer[T]
+	var response T
+
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.url+endpoint, nil)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("X-Plex-Token", c.token)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return response.MediaContainer, err
+		return response, err
 	}
 
 	defer func() {
@@ -55,12 +52,18 @@ func call[T any](ctx context.Context, c *Client, endpoint string) (T, error) {
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return response.MediaContainer, fmt.Errorf("http: %s", resp.Status)
+		return response, fmt.Errorf("http: %d - %s", resp.StatusCode, resp.Status)
 	}
 
-	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	//var buf bytes.Buffer
+	//r := io.TeeReader(resp.Body, &buf)
+	r := resp.Body
+
+	if err = json.NewDecoder(r).Decode(&response); err != nil {
 		err = fmt.Errorf("decode: %w", err)
 	}
 
-	return response.MediaContainer, err
+	//r2 := buf.String()[:min(500, buf.Len())]
+	//_ = r2
+	return response, err
 }

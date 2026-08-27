@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPlexClient_GetIdentity(t *testing.T) {
+func TestClient_GetIdentity(t *testing.T) {
 	c, s := makeClientAndServer(nil)
 	t.Cleanup(s.Close)
 

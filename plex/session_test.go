@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPlexClient_GetStats(t *testing.T) {
+func TestClient_GetSessions(t *testing.T) {
 	c, s := makeClientAndServer(nil)
 	t.Cleanup(s.Close)
 
