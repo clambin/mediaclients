@@ -2,6 +2,7 @@ package plex
 
 import (
 	"context"
+	"iter"
 )
 
 type Library struct {
@@ -133,12 +134,45 @@ func (c *Client) GetLibraries(ctx context.Context) ([]Library, error) {
 	return resp.MediaContainer.Directory, err
 }
 
-func (c *Client) GetAllLibraryMedia(ctx context.Context, key string) ([]MediaMetadata, error) {
+func (c *Client) GetAllLibraryMedia(ctx context.Context, key string) iter.Seq2[MediaMetadata, error] {
 	type response struct {
 		MediaContainer struct {
-			Metadata []MediaMetadata `json:"Metadata"`
+			TotalSize int             `json:"totalSize"`
+			Metadata  []MediaMetadata `json:"Metadata"`
 		} `json:"MediaContainer"`
 	}
-	resp, err := call[response](ctx, c, "/library/sections/"+key+"/allLeaves")
-	return resp.MediaContainer.Metadata, err
+
+	return func(yield func(metadata MediaMetadata, err error) bool) {
+		const pageSize = 500
+		var currentPage int
+		var currentRecords int
+		var totalRecords int
+		for {
+			// get a new page
+			resp, err := call[response](ctx, c, "/library/sections/"+key+"/allLeaves", withPagination(currentPage, pageSize))
+			if err != nil {
+				yield(MediaMetadata{}, err)
+				return
+			}
+
+			// update total number of records
+			totalRecords = resp.MediaContainer.TotalSize
+
+			// yield all records, increasing currentRecords
+			for _, metadata := range resp.MediaContainer.Metadata {
+				if !yield(metadata, nil) {
+					return
+				}
+				currentRecords++
+			}
+
+			// check for more data
+			if currentRecords >= totalRecords {
+				return
+			}
+
+			// set up next page
+			currentPage++
+		}
+	}
 }

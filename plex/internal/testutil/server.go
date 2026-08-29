@@ -35,6 +35,7 @@ var plexResponses = testutils.Responses{
     }}`)}},
 
 	"/library/sections/1/allLeaves": {http.MethodGet: {Body: []byte(`{ "MediaContainer" : {
+        "totalSize": 1,
         "Metadata": [
            { "guid": "1", "title": "baz" }
         ]
