@@ -2,6 +2,7 @@ package plex
 
 import (
 	"context"
+	"errors"
 	"iter"
 )
 
@@ -163,8 +164,16 @@ func (c *Client) GetAllLibraryMedia(ctx context.Context, key string) iter.Seq2[M
 				if !yield(metadata, nil) {
 					return
 				}
-				currentRecords++
 			}
+
+			// increase record counter.
+			// if we got an empty page, we may fall into an infinite loop, so abort.
+			pageRecords := len(resp.MediaContainer.Metadata)
+			if pageRecords == 0 {
+				yield(MediaMetadata{}, errors.New("api call returned empty page"))
+				return
+			}
+			currentRecords += pageRecords
 
 			// check for more data
 			if currentRecords >= totalRecords {
