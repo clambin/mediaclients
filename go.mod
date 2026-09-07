@@ -1,6 +1,6 @@
 module github.com/clambin/mediaclients
 
-go 1.26
+go 1.26.0
 
 require (
 	codeberg.org/clambin/go-common/set v0.6.0
@@ -9,7 +9,7 @@ require (
 	github.com/lestrrat-go/jwx/v3 v3.2.0
 	github.com/oapi-codegen/runtime v1.7.0
 	github.com/stretchr/testify v1.12.1
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 )
 
 require (
