@@ -1314,6 +1314,7 @@ type HistoryResourcePagingResource struct {
 
 // HostConfigResource defines model for HostConfigResource.
 type HostConfigResource struct {
+	AllowedHosts              *string                     `json:"allowedHosts,omitempty"`
 	AnalyticsEnabled          *bool                       `json:"analyticsEnabled,omitempty"`
 	ApiKey                    *string                     `json:"apiKey,omitempty"`
 	ApplicationUrl            *string                     `json:"applicationUrl,omitempty"`
@@ -1347,6 +1348,7 @@ type HostConfigResource struct {
 	SslCertPath               *string                     `json:"sslCertPath,omitempty"`
 	SslPort                   *int32                      `json:"sslPort,omitempty"`
 	TrustCgnatIpAddresses     *bool                       `json:"trustCgnatIpAddresses,omitempty"`
+	TrustedNetworks           *string                     `json:"trustedNetworks,omitempty"`
 	UpdateAutomatically       *bool                       `json:"updateAutomatically,omitempty"`
 	UpdateMechanism           *UpdateMechanism            `json:"updateMechanism,omitempty"`
 	UpdateScriptPath          *string                     `json:"updateScriptPath,omitempty"`
