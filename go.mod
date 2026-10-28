@@ -7,7 +7,7 @@ require (
 	codeberg.org/clambin/go-common/testutils v0.7.2
 	github.com/google/uuid v1.6.0
 	github.com/lestrrat-go/jwx/v3 v3.4.0
-	github.com/oapi-codegen/runtime v1.7.0
+	github.com/oapi-codegen/runtime v1.8.0
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/crypto v0.58.0
 )
