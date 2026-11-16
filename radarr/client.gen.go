@@ -62,6 +62,7 @@ func (e ApplyTags) Valid() bool {
 // Defines values for AuthenticationRequiredType.
 const (
 	AuthenticationRequiredTypeDisabledForLocalAddresses AuthenticationRequiredType = "disabledForLocalAddresses"
+	AuthenticationRequiredTypeDisabledForLocalhost      AuthenticationRequiredType = "disabledForLocalhost"
 	AuthenticationRequiredTypeEnabled                   AuthenticationRequiredType = "enabled"
 )
 
@@ -69,6 +70,8 @@ const (
 func (e AuthenticationRequiredType) Valid() bool {
 	switch e {
 	case AuthenticationRequiredTypeDisabledForLocalAddresses:
+		return true
+	case AuthenticationRequiredTypeDisabledForLocalhost:
 		return true
 	case AuthenticationRequiredTypeEnabled:
 		return true
@@ -83,6 +86,7 @@ const (
 	AuthenticationTypeExternal AuthenticationType = "external"
 	AuthenticationTypeForms    AuthenticationType = "forms"
 	AuthenticationTypeNone     AuthenticationType = "none"
+	AuthenticationTypeOidc     AuthenticationType = "oidc"
 )
 
 // Valid indicates whether the value is a known member of the AuthenticationType enum.
@@ -95,6 +99,8 @@ func (e AuthenticationType) Valid() bool {
 	case AuthenticationTypeForms:
 		return true
 	case AuthenticationTypeNone:
+		return true
+	case AuthenticationTypeOidc:
 		return true
 	default:
 		return false
@@ -380,6 +386,30 @@ func (e FileDateType) Valid() bool {
 	case FileDateTypeNone:
 		return true
 	case FileDateTypeRelease:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FileSystemEntityType.
+const (
+	Drive  FileSystemEntityType = "drive"
+	File   FileSystemEntityType = "file"
+	Folder FileSystemEntityType = "folder"
+	Parent FileSystemEntityType = "parent"
+)
+
+// Valid indicates whether the value is a known member of the FileSystemEntityType enum.
+func (e FileSystemEntityType) Valid() bool {
+	switch e {
+	case Drive:
+		return true
+	case File:
+		return true
+	case Folder:
+		return true
+	case Parent:
 		return true
 	default:
 		return false
@@ -857,6 +887,27 @@ func (e RuntimeMode) Valid() bool {
 	}
 }
 
+// Defines values for Severity.
+const (
+	SeverityError   Severity = "error"
+	SeverityInfo    Severity = "info"
+	SeverityWarning Severity = "warning"
+)
+
+// Valid indicates whether the value is a known member of the Severity enum.
+func (e Severity) Valid() bool {
+	switch e {
+	case SeverityError:
+		return true
+	case SeverityInfo:
+		return true
+	case SeverityWarning:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SortDirection.
 const (
 	Ascending  SortDirection = "ascending"
@@ -1049,6 +1100,15 @@ type AddMovieOptions struct {
 	SearchForMovie             *bool           `json:"searchForMovie,omitempty"`
 }
 
+// AlternativeTitle defines model for AlternativeTitle.
+type AlternativeTitle struct {
+	CleanTitle      *string     `json:"cleanTitle,omitempty"`
+	Id              *int32      `json:"id,omitempty"`
+	MovieMetadataId *int32      `json:"movieMetadataId,omitempty"`
+	SourceType      *SourceType `json:"sourceType,omitempty"`
+	Title           *string     `json:"title,omitempty"`
+}
+
 // AlternativeTitleResource defines model for AlternativeTitleResource.
 type AlternativeTitleResource struct {
 	CleanTitle      *string     `json:"cleanTitle,omitempty"`
@@ -1101,6 +1161,16 @@ type BackupResource struct {
 	Size *int64      `json:"size,omitempty"`
 	Time *time.Time  `json:"time,omitempty"`
 	Type *BackupType `json:"type,omitempty"`
+}
+
+// BackupRestoreErrorResource defines model for BackupRestoreErrorResource.
+type BackupRestoreErrorResource struct {
+	Error *string `json:"error,omitempty"`
+}
+
+// BackupRestoreResource defines model for BackupRestoreResource.
+type BackupRestoreResource struct {
+	RestartRequired *bool `json:"restartRequired,omitempty"`
 }
 
 // BackupType defines model for BackupType.
@@ -1407,6 +1477,38 @@ type Field struct {
 // FileDateType defines model for FileDateType.
 type FileDateType string
 
+// FileSystemEntityType defines model for FileSystemEntityType.
+type FileSystemEntityType string
+
+// FileSystemMediaFileResource defines model for FileSystemMediaFileResource.
+type FileSystemMediaFileResource struct {
+	Name         *string `json:"name,omitempty"`
+	Path         *string `json:"path,omitempty"`
+	RelativePath *string `json:"relativePath,omitempty"`
+}
+
+// FileSystemModel defines model for FileSystemModel.
+type FileSystemModel struct {
+	Extension    *string               `json:"extension,omitempty"`
+	LastModified *time.Time            `json:"lastModified,omitempty"`
+	Name         *string               `json:"name,omitempty"`
+	Path         *string               `json:"path,omitempty"`
+	Size         *int64                `json:"size,omitempty"`
+	Type         *FileSystemEntityType `json:"type,omitempty"`
+}
+
+// FileSystemResult defines model for FileSystemResult.
+type FileSystemResult struct {
+	Directories *[]FileSystemModel `json:"directories,omitempty"`
+	Files       *[]FileSystemModel `json:"files,omitempty"`
+	Parent      *string            `json:"parent,omitempty"`
+}
+
+// FileSystemTypeResource defines model for FileSystemTypeResource.
+type FileSystemTypeResource struct {
+	Type *FileSystemEntityType `json:"type,omitempty"`
+}
+
 // HealthCheckResult defines model for HealthCheckResult.
 type HealthCheckResult string
 
@@ -1448,6 +1550,7 @@ type HistoryResourcePagingResource struct {
 
 // HostConfigResource defines model for HostConfigResource.
 type HostConfigResource struct {
+	AllowedHosts              *string                     `json:"allowedHosts,omitempty"`
 	AnalyticsEnabled          *bool                       `json:"analyticsEnabled,omitempty"`
 	ApiKey                    *string                     `json:"apiKey,omitempty"`
 	ApplicationUrl            *string                     `json:"applicationUrl,omitempty"`
@@ -1466,6 +1569,11 @@ type HostConfigResource struct {
 	LaunchBrowser             *bool                       `json:"launchBrowser,omitempty"`
 	LogLevel                  *string                     `json:"logLevel,omitempty"`
 	LogSizeLimit              *int32                      `json:"logSizeLimit,omitempty"`
+	OidcAuthority             *string                     `json:"oidcAuthority,omitempty"`
+	OidcClientId              *string                     `json:"oidcClientId,omitempty"`
+	OidcClientSecret          *string                     `json:"oidcClientSecret,omitempty"`
+	OidcScopes                *string                     `json:"oidcScopes,omitempty"`
+	OidcUserIdentifier        *string                     `json:"oidcUserIdentifier,omitempty"`
 	Password                  *string                     `json:"password,omitempty"`
 	PasswordConfirmation      *string                     `json:"passwordConfirmation,omitempty"`
 	Port                      *int32                      `json:"port,omitempty"`
@@ -1479,8 +1587,10 @@ type HostConfigResource struct {
 	ProxyUsername             *string                     `json:"proxyUsername,omitempty"`
 	SslCertPassword           *string                     `json:"sslCertPassword,omitempty"`
 	SslCertPath               *string                     `json:"sslCertPath,omitempty"`
+	SslKeyPath                *string                     `json:"sslKeyPath,omitempty"`
 	SslPort                   *int32                      `json:"sslPort,omitempty"`
 	TrustCgnatIpAddresses     *bool                       `json:"trustCgnatIpAddresses,omitempty"`
+	TrustedNetworks           *string                     `json:"trustedNetworks,omitempty"`
 	UpdateAutomatically       *bool                       `json:"updateAutomatically,omitempty"`
 	UpdateMechanism           *UpdateMechanism            `json:"updateMechanism,omitempty"`
 	UpdateScriptPath          *string                     `json:"updateScriptPath,omitempty"`
@@ -1536,6 +1646,40 @@ type ImportListExclusionResourcePagingResource struct {
 	SortDirection *SortDirection                 `json:"sortDirection,omitempty"`
 	SortKey       *string                        `json:"sortKey,omitempty"`
 	TotalRecords  *int32                         `json:"totalRecords,omitempty"`
+}
+
+// ImportListMoviesResource defines model for ImportListMoviesResource.
+type ImportListMoviesResource struct {
+	Certification    *string          `json:"certification,omitempty"`
+	Collection       *MovieCollection `json:"collection,omitempty"`
+	DigitalRelease   *time.Time       `json:"digitalRelease,omitempty"`
+	Folder           *string          `json:"folder,omitempty"`
+	Genres           *[]string        `json:"genres,omitempty"`
+	Id               *int32           `json:"id,omitempty"`
+	Images           *[]MediaCover    `json:"images,omitempty"`
+	ImdbId           *string          `json:"imdbId,omitempty"`
+	InCinemas        *time.Time       `json:"inCinemas,omitempty"`
+	IsExcluded       *bool            `json:"isExcluded,omitempty"`
+	IsExisting       *bool            `json:"isExisting,omitempty"`
+	IsPopular        *bool            `json:"isPopular,omitempty"`
+	IsRecommendation *bool            `json:"isRecommendation,omitempty"`
+	IsTrending       *bool            `json:"isTrending,omitempty"`
+	Lists            *[]int32         `json:"lists,omitempty"`
+	OriginalLanguage *Language        `json:"originalLanguage,omitempty"`
+	Overview         *string          `json:"overview,omitempty"`
+	PhysicalRelease  *time.Time       `json:"physicalRelease,omitempty"`
+	Popularity       *float32         `json:"popularity,omitempty"`
+	Ratings          *Ratings         `json:"ratings,omitempty"`
+	RemotePoster     *string          `json:"remotePoster,omitempty"`
+	Runtime          *int32           `json:"runtime,omitempty"`
+	SortTitle        *string          `json:"sortTitle,omitempty"`
+	Status           *MovieStatusType `json:"status,omitempty"`
+	Studio           *string          `json:"studio,omitempty"`
+	Title            *string          `json:"title,omitempty"`
+	TmdbId           *int32           `json:"tmdbId,omitempty"`
+	Website          *string          `json:"website,omitempty"`
+	Year             *int32           `json:"year,omitempty"`
+	YouTubeTrailerId *string          `json:"youTubeTrailerId,omitempty"`
 }
 
 // ImportListResource defines model for ImportListResource.
@@ -1793,6 +1937,26 @@ type Modifier string
 // MonitorTypes defines model for MonitorTypes.
 type MonitorTypes string
 
+// MovieCollection defines model for MovieCollection.
+type MovieCollection struct {
+	Added               *time.Time       `json:"added,omitempty"`
+	CleanTitle          *string          `json:"cleanTitle,omitempty"`
+	Id                  *int32           `json:"id,omitempty"`
+	Images              *[]MediaCover    `json:"images,omitempty"`
+	LastInfoSync        *time.Time       `json:"lastInfoSync,omitempty"`
+	MinimumAvailability *MovieStatusType `json:"minimumAvailability,omitempty"`
+	Monitored           *bool            `json:"monitored,omitempty"`
+	Movies              *[]MovieMetadata `json:"movies,omitempty"`
+	Overview            *string          `json:"overview,omitempty"`
+	QualityProfileId    *int32           `json:"qualityProfileId,omitempty"`
+	RootFolderPath      *string          `json:"rootFolderPath,omitempty"`
+	SearchOnAdd         *bool            `json:"searchOnAdd,omitempty"`
+	SortTitle           *string          `json:"sortTitle,omitempty"`
+	Tags                *[]int32         `json:"tags,omitempty"`
+	Title               *string          `json:"title,omitempty"`
+	TmdbId              *int32           `json:"tmdbId,omitempty"`
+}
+
 // MovieCollectionResource defines model for MovieCollectionResource.
 type MovieCollectionResource struct {
 	Title  *string `json:"title,omitempty"`
@@ -1845,8 +2009,50 @@ type MovieFileResource struct {
 	Size                *int64                  `json:"size,omitempty"`
 }
 
+// MovieFolderResource defines model for MovieFolderResource.
+type MovieFolderResource struct {
+	Folder *string `json:"folder,omitempty"`
+}
+
 // MovieHistoryEventType defines model for MovieHistoryEventType.
 type MovieHistoryEventType string
+
+// MovieMetadata defines model for MovieMetadata.
+type MovieMetadata struct {
+	AlternativeTitles  *[]AlternativeTitle `json:"alternativeTitles,omitempty"`
+	Certification      *string             `json:"certification,omitempty"`
+	CleanOriginalTitle *string             `json:"cleanOriginalTitle,omitempty"`
+	CleanTitle         *string             `json:"cleanTitle,omitempty"`
+	CollectionTitle    *string             `json:"collectionTitle,omitempty"`
+	CollectionTmdbId   *int32              `json:"collectionTmdbId,omitempty"`
+	DigitalRelease     *time.Time          `json:"digitalRelease,omitempty"`
+	Genres             *[]string           `json:"genres,omitempty"`
+	Id                 *int32              `json:"id,omitempty"`
+	Images             *[]MediaCover       `json:"images,omitempty"`
+	ImdbId             *string             `json:"imdbId,omitempty"`
+	InCinemas          *time.Time          `json:"inCinemas,omitempty"`
+	IsRecentMovie      *bool               `json:"isRecentMovie,omitempty"`
+	Keywords           *[]string           `json:"keywords,omitempty"`
+	LastInfoSync       *time.Time          `json:"lastInfoSync,omitempty"`
+	OriginalLanguage   *Language           `json:"originalLanguage,omitempty"`
+	OriginalTitle      *string             `json:"originalTitle,omitempty"`
+	Overview           *string             `json:"overview,omitempty"`
+	PhysicalRelease    *time.Time          `json:"physicalRelease,omitempty"`
+	Popularity         *float32            `json:"popularity,omitempty"`
+	Ratings            *Ratings            `json:"ratings,omitempty"`
+	Recommendations    *[]int32            `json:"recommendations,omitempty"`
+	Runtime            *int32              `json:"runtime,omitempty"`
+	SecondaryYear      *int32              `json:"secondaryYear,omitempty"`
+	SortTitle          *string             `json:"sortTitle,omitempty"`
+	Status             *MovieStatusType    `json:"status,omitempty"`
+	Studio             *string             `json:"studio,omitempty"`
+	Title              *string             `json:"title,omitempty"`
+	TmdbId             *int32              `json:"tmdbId,omitempty"`
+	Translations       *[]MovieTranslation `json:"translations,omitempty"`
+	Website            *string             `json:"website,omitempty"`
+	Year               *int32              `json:"year,omitempty"`
+	YouTubeTrailerId   *string             `json:"youTubeTrailerId,omitempty"`
+}
 
 // MovieResource defines model for MovieResource.
 type MovieResource struct {
@@ -1916,13 +2122,24 @@ type MovieRuntimeFormatType string
 
 // MovieStatisticsResource defines model for MovieStatisticsResource.
 type MovieStatisticsResource struct {
-	MovieFileCount *int32    `json:"movieFileCount,omitempty"`
-	ReleaseGroups  *[]string `json:"releaseGroups,omitempty"`
-	SizeOnDisk     *int64    `json:"sizeOnDisk,omitempty"`
+	MovieFileCount     *int32     `json:"movieFileCount,omitempty"`
+	MovieFileQualities *[]Quality `json:"movieFileQualities,omitempty"`
+	ReleaseGroups      *[]string  `json:"releaseGroups,omitempty"`
+	SizeOnDisk         *int64     `json:"sizeOnDisk,omitempty"`
 }
 
 // MovieStatusType defines model for MovieStatusType.
 type MovieStatusType string
+
+// MovieTranslation defines model for MovieTranslation.
+type MovieTranslation struct {
+	CleanTitle      *string   `json:"cleanTitle,omitempty"`
+	Id              *int32    `json:"id,omitempty"`
+	Language        *Language `json:"language,omitempty"`
+	MovieMetadataId *int32    `json:"movieMetadataId,omitempty"`
+	Overview        *string   `json:"overview,omitempty"`
+	Title           *string   `json:"title,omitempty"`
+}
 
 // NamingConfigResource defines model for NamingConfigResource.
 type NamingConfigResource struct {
@@ -1932,6 +2149,12 @@ type NamingConfigResource struct {
 	RenameMovies             *bool                   `json:"renameMovies,omitempty"`
 	ReplaceIllegalCharacters *bool                   `json:"replaceIllegalCharacters,omitempty"`
 	StandardMovieFormat      *string                 `json:"standardMovieFormat,omitempty"`
+}
+
+// NamingExampleResource defines model for NamingExampleResource.
+type NamingExampleResource struct {
+	MovieExample       *string `json:"movieExample,omitempty"`
+	MovieFolderExample *string `json:"movieFolderExample,omitempty"`
 }
 
 // NotificationResource defines model for NotificationResource.
@@ -2013,6 +2236,16 @@ type PingResource struct {
 // PrivacyLevel defines model for PrivacyLevel.
 type PrivacyLevel string
 
+// ProblemDetails defines model for ProblemDetails.
+type ProblemDetails struct {
+	Detail               *string                `json:"detail,omitempty"`
+	Instance             *string                `json:"instance,omitempty"`
+	Status               *int32                 `json:"status,omitempty"`
+	Title                *string                `json:"title,omitempty"`
+	Type                 *string                `json:"type,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
 // ProfileFormatItemResource defines model for ProfileFormatItemResource.
 type ProfileFormatItemResource struct {
 	Format *int32  `json:"format,omitempty"`
@@ -2032,6 +2265,13 @@ type ProviderMessage struct {
 
 // ProviderMessageType defines model for ProviderMessageType.
 type ProviderMessageType string
+
+// ProviderTestAllResult defines model for ProviderTestAllResult.
+type ProviderTestAllResult struct {
+	Id                 *int32               `json:"id,omitempty"`
+	IsValid            *bool                `json:"isValid,omitempty"`
+	ValidationFailures *[]ValidationFailure `json:"validationFailures,omitempty"`
+}
 
 // ProxyType defines model for ProxyType.
 type ProxyType string
@@ -2176,6 +2416,12 @@ type Ratings struct {
 // RejectionType defines model for RejectionType.
 type RejectionType string
 
+// ReleaseHistoryResource defines model for ReleaseHistoryResource.
+type ReleaseHistoryResource struct {
+	Failed  *time.Time `json:"failed,omitempty"`
+	Grabbed *time.Time `json:"grabbed,omitempty"`
+}
+
 // ReleaseProfileResource defines model for ReleaseProfileResource.
 type ReleaseProfileResource struct {
 	Enabled   *bool       `json:"enabled,omitempty"`
@@ -2202,6 +2448,7 @@ type ReleaseResource struct {
 	DownloadUrl         *string                 `json:"downloadUrl,omitempty"`
 	Edition             *string                 `json:"edition,omitempty"`
 	Guid                *string                 `json:"guid,omitempty"`
+	History             *ReleaseHistoryResource `json:"history,omitempty"`
 	Id                  *int32                  `json:"id,omitempty"`
 	ImdbId              *int32                  `json:"imdbId,omitempty"`
 	Indexer             *string                 `json:"indexer,omitempty"`
@@ -2283,6 +2530,9 @@ type SelectOption struct {
 	Value        *int32  `json:"value,omitempty"`
 }
 
+// Severity defines model for Severity.
+type Severity string
+
 // SortDirection defines model for SortDirection.
 type SortDirection string
 
@@ -2300,6 +2550,7 @@ type SystemResource struct {
 	DatabaseVersion               *string             `json:"databaseVersion,omitempty"`
 	InstanceName                  *string             `json:"instanceName,omitempty"`
 	IsAdmin                       *bool               `json:"isAdmin,omitempty"`
+	IsContainerized               *bool               `json:"isContainerized,omitempty"`
 	IsDebug                       *bool               `json:"isDebug,omitempty"`
 	IsDocker                      *bool               `json:"isDocker,omitempty"`
 	IsLinux                       *bool               `json:"isLinux,omitempty"`
@@ -2322,6 +2573,16 @@ type SystemResource struct {
 	StartupPath                   *string             `json:"startupPath,omitempty"`
 	UrlBase                       *string             `json:"urlBase,omitempty"`
 	Version                       *string             `json:"version,omitempty"`
+}
+
+// SystemRestartResource defines model for SystemRestartResource.
+type SystemRestartResource struct {
+	Restarting *bool `json:"restarting,omitempty"`
+}
+
+// SystemShutdownResource defines model for SystemShutdownResource.
+type SystemShutdownResource struct {
+	ShuttingDown *bool `json:"shuttingDown,omitempty"`
 }
 
 // TMDbCountryCode defines model for TMDbCountryCode.
@@ -2419,6 +2680,19 @@ type UpdateResource struct {
 	Version     *string        `json:"version,omitempty"`
 }
 
+// ValidationFailure defines model for ValidationFailure.
+type ValidationFailure struct {
+	AttemptedValue interface{} `json:"attemptedValue,omitempty"`
+	CustomState    interface{} `json:"customState,omitempty"`
+	ErrorCode      *string     `json:"errorCode,omitempty"`
+	ErrorMessage   *string     `json:"errorMessage,omitempty"`
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	FormattedMessageArguments         *[]interface{}          `json:"formattedMessageArguments,omitempty"`
+	FormattedMessagePlaceholderValues *map[string]interface{} `json:"formattedMessagePlaceholderValues,omitempty"`
+	PropertyName                      *string                 `json:"propertyName,omitempty"`
+	Severity                          *Severity               `json:"severity,omitempty"`
+}
+
 // GetApiV3AlttitleParams defines parameters for GetApiV3Alttitle.
 type GetApiV3AlttitleParams struct {
 	MovieId         *int32 `form:"movieId,omitempty" json:"movieId,omitempty"`
@@ -2489,9 +2763,6 @@ type PostApiV3DownloadclientTestParams struct {
 type PutApiV3DownloadclientIdParams struct {
 	ForceSave *bool `form:"forceSave,omitempty" json:"forceSave,omitempty"`
 }
-
-// PostApiV3ExclusionsBulkApplicationWildcardPlusJSONBody defines parameters for PostApiV3ExclusionsBulk.
-type PostApiV3ExclusionsBulkApplicationWildcardPlusJSONBody = []ImportListExclusionResource
 
 // PostApiV3ExclusionsBulkJSONBody defines parameters for PostApiV3ExclusionsBulk.
 type PostApiV3ExclusionsBulkJSONBody = []ImportListExclusionResource
@@ -2565,9 +2836,6 @@ type GetApiV3ImportlistMovieParams struct {
 	IncludeTrending        *bool `form:"includeTrending,omitempty" json:"includeTrending,omitempty"`
 	IncludePopular         *bool `form:"includePopular,omitempty" json:"includePopular,omitempty"`
 }
-
-// PostApiV3ImportlistMovieApplicationWildcardPlusJSONBody defines parameters for PostApiV3ImportlistMovie.
-type PostApiV3ImportlistMovieApplicationWildcardPlusJSONBody = []MovieResource
 
 // PostApiV3ImportlistMovieJSONBody defines parameters for PostApiV3ImportlistMovie.
 type PostApiV3ImportlistMovieJSONBody = []MovieResource
@@ -2697,9 +2965,6 @@ type GetApiV3ParseParams struct {
 	Title *string `form:"title,omitempty" json:"title,omitempty"`
 }
 
-// PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONBody defines parameters for PutApiV3QualitydefinitionUpdate.
-type PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONBody = []QualityDefinitionResource
-
 // PutApiV3QualitydefinitionUpdateJSONBody defines parameters for PutApiV3QualitydefinitionUpdate.
 type PutApiV3QualitydefinitionUpdateJSONBody = []QualityDefinitionResource
 
@@ -2789,14 +3054,16 @@ type PostLoginParams struct {
 	ReturnUrl *string `form:"returnUrl,omitempty" json:"returnUrl,omitempty"`
 }
 
+// GetLoginSsoParams defines parameters for GetLoginSso.
+type GetLoginSsoParams struct {
+	ReturnUrl *string `form:"returnUrl,omitempty" json:"returnUrl,omitempty"`
+}
+
 // PostApiV3AutotaggingJSONRequestBody defines body for PostApiV3Autotagging for application/json ContentType.
 type PostApiV3AutotaggingJSONRequestBody = AutoTaggingResource
 
 // PutApiV3AutotaggingIdJSONRequestBody defines body for PutApiV3AutotaggingId for application/json ContentType.
 type PutApiV3AutotaggingIdJSONRequestBody = AutoTaggingResource
-
-// DeleteApiV3BlocklistBulkApplicationWildcardPlusJSONRequestBody defines body for DeleteApiV3BlocklistBulk for application/*+json ContentType.
-type DeleteApiV3BlocklistBulkApplicationWildcardPlusJSONRequestBody = BlocklistBulkResource
 
 // DeleteApiV3BlocklistBulkJSONRequestBody defines body for DeleteApiV3BlocklistBulk for application/json ContentType.
 type DeleteApiV3BlocklistBulkJSONRequestBody = BlocklistBulkResource
@@ -2813,9 +3080,6 @@ type PostApiV3CommandJSONRequestBody = CommandResource
 // PutApiV3ConfigDownloadclientIdJSONRequestBody defines body for PutApiV3ConfigDownloadclientId for application/json ContentType.
 type PutApiV3ConfigDownloadclientIdJSONRequestBody = DownloadClientConfigResource
 
-// PutApiV3ConfigHostIdApplicationWildcardPlusJSONRequestBody defines body for PutApiV3ConfigHostId for application/*+json ContentType.
-type PutApiV3ConfigHostIdApplicationWildcardPlusJSONRequestBody = HostConfigResource
-
 // PutApiV3ConfigHostIdJSONRequestBody defines body for PutApiV3ConfigHostId for application/json ContentType.
 type PutApiV3ConfigHostIdJSONRequestBody = HostConfigResource
 
@@ -2830,9 +3094,6 @@ type PutApiV3ConfigMediamanagementIdJSONRequestBody = MediaManagementConfigResou
 
 // PutApiV3ConfigMetadataIdJSONRequestBody defines body for PutApiV3ConfigMetadataId for application/json ContentType.
 type PutApiV3ConfigMetadataIdJSONRequestBody = MetadataConfigResource
-
-// PutApiV3ConfigNamingIdApplicationWildcardPlusJSONRequestBody defines body for PutApiV3ConfigNamingId for application/*+json ContentType.
-type PutApiV3ConfigNamingIdApplicationWildcardPlusJSONRequestBody = NamingConfigResource
 
 // PutApiV3ConfigNamingIdJSONRequestBody defines body for PutApiV3ConfigNamingId for application/json ContentType.
 type PutApiV3ConfigNamingIdJSONRequestBody = NamingConfigResource
@@ -2885,14 +3146,8 @@ type PutApiV3DownloadclientIdJSONRequestBody = DownloadClientResource
 // PostApiV3ExclusionsJSONRequestBody defines body for PostApiV3Exclusions for application/json ContentType.
 type PostApiV3ExclusionsJSONRequestBody = ImportListExclusionResource
 
-// DeleteApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody defines body for DeleteApiV3ExclusionsBulk for application/*+json ContentType.
-type DeleteApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody = ImportListExclusionBulkResource
-
 // DeleteApiV3ExclusionsBulkJSONRequestBody defines body for DeleteApiV3ExclusionsBulk for application/json ContentType.
 type DeleteApiV3ExclusionsBulkJSONRequestBody = ImportListExclusionBulkResource
-
-// PostApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody defines body for PostApiV3ExclusionsBulk for application/*+json ContentType.
-type PostApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody = PostApiV3ExclusionsBulkApplicationWildcardPlusJSONBody
 
 // PostApiV3ExclusionsBulkJSONRequestBody defines body for PostApiV3ExclusionsBulk for application/json ContentType.
 type PostApiV3ExclusionsBulkJSONRequestBody = PostApiV3ExclusionsBulkJSONBody
@@ -2911,9 +3166,6 @@ type DeleteApiV3ImportlistBulkJSONRequestBody = ImportListBulkResource
 
 // PutApiV3ImportlistBulkJSONRequestBody defines body for PutApiV3ImportlistBulk for application/json ContentType.
 type PutApiV3ImportlistBulkJSONRequestBody = ImportListBulkResource
-
-// PostApiV3ImportlistMovieApplicationWildcardPlusJSONRequestBody defines body for PostApiV3ImportlistMovie for application/*+json ContentType.
-type PostApiV3ImportlistMovieApplicationWildcardPlusJSONRequestBody = PostApiV3ImportlistMovieApplicationWildcardPlusJSONBody
 
 // PostApiV3ImportlistMovieJSONRequestBody defines body for PostApiV3ImportlistMovie for application/json ContentType.
 type PostApiV3ImportlistMovieJSONRequestBody = PostApiV3ImportlistMovieJSONBody
@@ -2960,14 +3212,8 @@ type PutApiV3MetadataIdJSONRequestBody = MetadataResource
 // PostApiV3MovieJSONRequestBody defines body for PostApiV3Movie for application/json ContentType.
 type PostApiV3MovieJSONRequestBody = MovieResource
 
-// DeleteApiV3MovieEditorApplicationWildcardPlusJSONRequestBody defines body for DeleteApiV3MovieEditor for application/*+json ContentType.
-type DeleteApiV3MovieEditorApplicationWildcardPlusJSONRequestBody = MovieEditorResource
-
 // DeleteApiV3MovieEditorJSONRequestBody defines body for DeleteApiV3MovieEditor for application/json ContentType.
 type DeleteApiV3MovieEditorJSONRequestBody = MovieEditorResource
-
-// PutApiV3MovieEditorApplicationWildcardPlusJSONRequestBody defines body for PutApiV3MovieEditor for application/*+json ContentType.
-type PutApiV3MovieEditorApplicationWildcardPlusJSONRequestBody = MovieEditorResource
 
 // PutApiV3MovieEditorJSONRequestBody defines body for PutApiV3MovieEditor for application/json ContentType.
 type PutApiV3MovieEditorJSONRequestBody = MovieEditorResource
@@ -3004,14 +3250,8 @@ type PostApiV3NotificationTestJSONRequestBody = NotificationResource
 // PutApiV3NotificationIdJSONRequestBody defines body for PutApiV3NotificationId for application/json ContentType.
 type PutApiV3NotificationIdJSONRequestBody = NotificationResource
 
-// PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONRequestBody defines body for PutApiV3QualitydefinitionUpdate for application/*+json ContentType.
-type PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONRequestBody = PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONBody
-
 // PutApiV3QualitydefinitionUpdateJSONRequestBody defines body for PutApiV3QualitydefinitionUpdate for application/json ContentType.
 type PutApiV3QualitydefinitionUpdateJSONRequestBody = PutApiV3QualitydefinitionUpdateJSONBody
-
-// PutApiV3QualitydefinitionIdApplicationWildcardPlusJSONRequestBody defines body for PutApiV3QualitydefinitionId for application/*+json ContentType.
-type PutApiV3QualitydefinitionIdApplicationWildcardPlusJSONRequestBody = QualityDefinitionResource
 
 // PutApiV3QualitydefinitionIdJSONRequestBody defines body for PutApiV3QualitydefinitionId for application/json ContentType.
 type PutApiV3QualitydefinitionIdJSONRequestBody = QualityDefinitionResource
@@ -3021,9 +3261,6 @@ type PostApiV3QualityprofileJSONRequestBody = QualityProfileResource
 
 // PutApiV3QualityprofileIdJSONRequestBody defines body for PutApiV3QualityprofileId for application/json ContentType.
 type PutApiV3QualityprofileIdJSONRequestBody = QualityProfileResource
-
-// DeleteApiV3QueueBulkApplicationWildcardPlusJSONRequestBody defines body for DeleteApiV3QueueBulk for application/*+json ContentType.
-type DeleteApiV3QueueBulkApplicationWildcardPlusJSONRequestBody = QueueBulkResource
 
 // DeleteApiV3QueueBulkJSONRequestBody defines body for DeleteApiV3QueueBulk for application/json ContentType.
 type DeleteApiV3QueueBulkJSONRequestBody = QueueBulkResource
@@ -3037,23 +3274,14 @@ type PostApiV3ReleaseJSONRequestBody = ReleaseResource
 // PostApiV3ReleasePushJSONRequestBody defines body for PostApiV3ReleasePush for application/json ContentType.
 type PostApiV3ReleasePushJSONRequestBody = ReleaseResource
 
-// PostApiV3ReleaseprofileApplicationWildcardPlusJSONRequestBody defines body for PostApiV3Releaseprofile for application/*+json ContentType.
-type PostApiV3ReleaseprofileApplicationWildcardPlusJSONRequestBody = ReleaseProfileResource
-
 // PostApiV3ReleaseprofileJSONRequestBody defines body for PostApiV3Releaseprofile for application/json ContentType.
 type PostApiV3ReleaseprofileJSONRequestBody = ReleaseProfileResource
-
-// PutApiV3ReleaseprofileIdApplicationWildcardPlusJSONRequestBody defines body for PutApiV3ReleaseprofileId for application/*+json ContentType.
-type PutApiV3ReleaseprofileIdApplicationWildcardPlusJSONRequestBody = ReleaseProfileResource
 
 // PutApiV3ReleaseprofileIdJSONRequestBody defines body for PutApiV3ReleaseprofileId for application/json ContentType.
 type PutApiV3ReleaseprofileIdJSONRequestBody = ReleaseProfileResource
 
 // PostApiV3RemotepathmappingJSONRequestBody defines body for PostApiV3Remotepathmapping for application/json ContentType.
 type PostApiV3RemotepathmappingJSONRequestBody = RemotePathMappingResource
-
-// PutApiV3RemotepathmappingIdApplicationWildcardPlusJSONRequestBody defines body for PutApiV3RemotepathmappingId for application/*+json ContentType.
-type PutApiV3RemotepathmappingIdApplicationWildcardPlusJSONRequestBody = RemotePathMappingResource
 
 // PutApiV3RemotepathmappingIdJSONRequestBody defines body for PutApiV3RemotepathmappingId for application/json ContentType.
 type PutApiV3RemotepathmappingIdJSONRequestBody = RemotePathMappingResource
@@ -3069,6 +3297,134 @@ type PutApiV3TagIdJSONRequestBody = TagResource
 
 // PostLoginMultipartRequestBody defines body for PostLogin for multipart/form-data ContentType.
 type PostLoginMultipartRequestBody PostLoginMultipartBody
+
+// Getter for additional properties for ProblemDetails. Returns the specified
+// element and whether it was found
+func (a ProblemDetails) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for ProblemDetails
+func (a *ProblemDetails) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for ProblemDetails to handle AdditionalProperties
+func (a *ProblemDetails) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["detail"]; found {
+		err = json.Unmarshal(raw, &a.Detail)
+		if err != nil {
+			return fmt.Errorf("error reading 'detail': %w", err)
+		}
+		delete(object, "detail")
+	}
+
+	if raw, found := object["instance"]; found {
+		err = json.Unmarshal(raw, &a.Instance)
+		if err != nil {
+			return fmt.Errorf("error reading 'instance': %w", err)
+		}
+		delete(object, "instance")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["title"]; found {
+		err = json.Unmarshal(raw, &a.Title)
+		if err != nil {
+			return fmt.Errorf("error reading 'title': %w", err)
+		}
+		delete(object, "title")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for ProblemDetails to handle AdditionalProperties
+func (a ProblemDetails) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Detail != nil {
+		object["detail"], err = json.Marshal(a.Detail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'detail': %w", err)
+		}
+	}
+
+	if a.Instance != nil {
+		object["instance"], err = json.Marshal(a.Instance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'instance': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
+	}
+
+	if a.Title != nil {
+		object["title"], err = json.Marshal(a.Title)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'title': %w", err)
+		}
+	}
+
+	if a.Type != nil {
+		object["type"], err = json.Marshal(a.Type)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'type': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
 
 // RequestEditorFn is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -3188,10 +3544,6 @@ type ClientInterface interface {
 	// with any type of body and a specified content type.
 	DeleteApiV3BlocklistBulkWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteApiV3BlocklistBulkWithApplicationWildcardPlusJSONBody performs a DELETE /api/v3/blocklist/bulk (the `DeleteApiV3BlocklistBulk` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	DeleteApiV3BlocklistBulkWithApplicationWildcardPlusJSONBody(ctx context.Context, body DeleteApiV3BlocklistBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// DeleteApiV3BlocklistBulk performs a DELETE /api/v3/blocklist/bulk (the `DeleteApiV3BlocklistBulk` operationId) request.
 	// Takes a body of the `application/json` content type.
 	DeleteApiV3BlocklistBulk(ctx context.Context, body DeleteApiV3BlocklistBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3268,10 +3620,6 @@ type ClientInterface interface {
 	// with any type of body and a specified content type.
 	PutApiV3ConfigHostIdWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// PutApiV3ConfigHostIdWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/config/host/{id} (the `PutApiV3ConfigHostId` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	PutApiV3ConfigHostIdWithApplicationWildcardPlusJSONBody(ctx context.Context, id string, body PutApiV3ConfigHostIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// PutApiV3ConfigHostId performs a PUT /api/v3/config/host/{id} (the `PutApiV3ConfigHostId` operationId) request.
 	// Takes a body of the `application/json` content type.
 	PutApiV3ConfigHostId(ctx context.Context, id string, body PutApiV3ConfigHostIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3344,10 +3692,6 @@ type ClientInterface interface {
 	// PutApiV3ConfigNamingIdWithBody performs a PUT /api/v3/config/naming/{id} (the `PutApiV3ConfigNamingId` operationId) request,
 	// with any type of body and a specified content type.
 	PutApiV3ConfigNamingIdWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PutApiV3ConfigNamingIdWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/config/naming/{id} (the `PutApiV3ConfigNamingId` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	PutApiV3ConfigNamingIdWithApplicationWildcardPlusJSONBody(ctx context.Context, id string, body PutApiV3ConfigNamingIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutApiV3ConfigNamingId performs a PUT /api/v3/config/naming/{id} (the `PutApiV3ConfigNamingId` operationId) request.
 	// Takes a body of the `application/json` content type.
@@ -3553,10 +3897,6 @@ type ClientInterface interface {
 	// with any type of body and a specified content type.
 	DeleteApiV3ExclusionsBulkWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBody performs a DELETE /api/v3/exclusions/bulk (the `DeleteApiV3ExclusionsBulk` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	DeleteApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBody(ctx context.Context, body DeleteApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// DeleteApiV3ExclusionsBulk performs a DELETE /api/v3/exclusions/bulk (the `DeleteApiV3ExclusionsBulk` operationId) request.
 	// Takes a body of the `application/json` content type.
 	DeleteApiV3ExclusionsBulk(ctx context.Context, body DeleteApiV3ExclusionsBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3564,10 +3904,6 @@ type ClientInterface interface {
 	// PostApiV3ExclusionsBulkWithBody performs a POST /api/v3/exclusions/bulk (the `PostApiV3ExclusionsBulk` operationId) request,
 	// with any type of body and a specified content type.
 	PostApiV3ExclusionsBulkWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PostApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBody performs a POST /api/v3/exclusions/bulk (the `PostApiV3ExclusionsBulk` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	PostApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBody(ctx context.Context, body PostApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PostApiV3ExclusionsBulk performs a POST /api/v3/exclusions/bulk (the `PostApiV3ExclusionsBulk` operationId) request.
 	// Takes a body of the `application/json` content type.
@@ -3658,10 +3994,6 @@ type ClientInterface interface {
 	// PostApiV3ImportlistMovieWithBody performs a POST /api/v3/importlist/movie (the `PostApiV3ImportlistMovie` operationId) request,
 	// with any type of body and a specified content type.
 	PostApiV3ImportlistMovieWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PostApiV3ImportlistMovieWithApplicationWildcardPlusJSONBody performs a POST /api/v3/importlist/movie (the `PostApiV3ImportlistMovie` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	PostApiV3ImportlistMovieWithApplicationWildcardPlusJSONBody(ctx context.Context, body PostApiV3ImportlistMovieApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PostApiV3ImportlistMovie performs a POST /api/v3/importlist/movie (the `PostApiV3ImportlistMovie` operationId) request.
 	// Takes a body of the `application/json` content type.
@@ -3864,10 +4196,6 @@ type ClientInterface interface {
 	// with any type of body and a specified content type.
 	DeleteApiV3MovieEditorWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteApiV3MovieEditorWithApplicationWildcardPlusJSONBody performs a DELETE /api/v3/movie/editor (the `DeleteApiV3MovieEditor` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	DeleteApiV3MovieEditorWithApplicationWildcardPlusJSONBody(ctx context.Context, body DeleteApiV3MovieEditorApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// DeleteApiV3MovieEditor performs a DELETE /api/v3/movie/editor (the `DeleteApiV3MovieEditor` operationId) request.
 	// Takes a body of the `application/json` content type.
 	DeleteApiV3MovieEditor(ctx context.Context, body DeleteApiV3MovieEditorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3875,10 +4203,6 @@ type ClientInterface interface {
 	// PutApiV3MovieEditorWithBody performs a PUT /api/v3/movie/editor (the `PutApiV3MovieEditor` operationId) request,
 	// with any type of body and a specified content type.
 	PutApiV3MovieEditorWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PutApiV3MovieEditorWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/movie/editor (the `PutApiV3MovieEditor` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	PutApiV3MovieEditorWithApplicationWildcardPlusJSONBody(ctx context.Context, body PutApiV3MovieEditorApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutApiV3MovieEditor performs a PUT /api/v3/movie/editor (the `PutApiV3MovieEditor` operationId) request.
 	// Takes a body of the `application/json` content type.
@@ -4023,10 +4347,6 @@ type ClientInterface interface {
 	// with any type of body and a specified content type.
 	PutApiV3QualitydefinitionUpdateWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// PutApiV3QualitydefinitionUpdateWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/qualitydefinition/update (the `PutApiV3QualitydefinitionUpdate` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	PutApiV3QualitydefinitionUpdateWithApplicationWildcardPlusJSONBody(ctx context.Context, body PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// PutApiV3QualitydefinitionUpdate performs a PUT /api/v3/qualitydefinition/update (the `PutApiV3QualitydefinitionUpdate` operationId) request.
 	// Takes a body of the `application/json` content type.
 	PutApiV3QualitydefinitionUpdate(ctx context.Context, body PutApiV3QualitydefinitionUpdateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4037,10 +4357,6 @@ type ClientInterface interface {
 	// PutApiV3QualitydefinitionIdWithBody performs a PUT /api/v3/qualitydefinition/{id} (the `PutApiV3QualitydefinitionId` operationId) request,
 	// with any type of body and a specified content type.
 	PutApiV3QualitydefinitionIdWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PutApiV3QualitydefinitionIdWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/qualitydefinition/{id} (the `PutApiV3QualitydefinitionId` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	PutApiV3QualitydefinitionIdWithApplicationWildcardPlusJSONBody(ctx context.Context, id string, body PutApiV3QualitydefinitionIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutApiV3QualitydefinitionId performs a PUT /api/v3/qualitydefinition/{id} (the `PutApiV3QualitydefinitionId` operationId) request.
 	// Takes a body of the `application/json` content type.
@@ -4080,10 +4396,6 @@ type ClientInterface interface {
 	// DeleteApiV3QueueBulkWithBody performs a DELETE /api/v3/queue/bulk (the `DeleteApiV3QueueBulk` operationId) request,
 	// with any type of body and a specified content type.
 	DeleteApiV3QueueBulkWithBody(ctx context.Context, params *DeleteApiV3QueueBulkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// DeleteApiV3QueueBulkWithApplicationWildcardPlusJSONBody performs a DELETE /api/v3/queue/bulk (the `DeleteApiV3QueueBulk` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	DeleteApiV3QueueBulkWithApplicationWildcardPlusJSONBody(ctx context.Context, params *DeleteApiV3QueueBulkParams, body DeleteApiV3QueueBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteApiV3QueueBulk performs a DELETE /api/v3/queue/bulk (the `DeleteApiV3QueueBulk` operationId) request.
 	// Takes a body of the `application/json` content type.
@@ -4135,10 +4447,6 @@ type ClientInterface interface {
 	// with any type of body and a specified content type.
 	PostApiV3ReleaseprofileWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// PostApiV3ReleaseprofileWithApplicationWildcardPlusJSONBody performs a POST /api/v3/releaseprofile (the `PostApiV3Releaseprofile` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	PostApiV3ReleaseprofileWithApplicationWildcardPlusJSONBody(ctx context.Context, body PostApiV3ReleaseprofileApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// PostApiV3Releaseprofile performs a POST /api/v3/releaseprofile (the `PostApiV3Releaseprofile` operationId) request.
 	// Takes a body of the `application/json` content type.
 	PostApiV3Releaseprofile(ctx context.Context, body PostApiV3ReleaseprofileJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4152,10 +4460,6 @@ type ClientInterface interface {
 	// PutApiV3ReleaseprofileIdWithBody performs a PUT /api/v3/releaseprofile/{id} (the `PutApiV3ReleaseprofileId` operationId) request,
 	// with any type of body and a specified content type.
 	PutApiV3ReleaseprofileIdWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PutApiV3ReleaseprofileIdWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/releaseprofile/{id} (the `PutApiV3ReleaseprofileId` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	PutApiV3ReleaseprofileIdWithApplicationWildcardPlusJSONBody(ctx context.Context, id string, body PutApiV3ReleaseprofileIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutApiV3ReleaseprofileId performs a PUT /api/v3/releaseprofile/{id} (the `PutApiV3ReleaseprofileId` operationId) request.
 	// Takes a body of the `application/json` content type.
@@ -4181,10 +4485,6 @@ type ClientInterface interface {
 	// PutApiV3RemotepathmappingIdWithBody performs a PUT /api/v3/remotepathmapping/{id} (the `PutApiV3RemotepathmappingId` operationId) request,
 	// with any type of body and a specified content type.
 	PutApiV3RemotepathmappingIdWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PutApiV3RemotepathmappingIdWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/remotepathmapping/{id} (the `PutApiV3RemotepathmappingId` operationId) request.
-	// Takes a body of the `application/*+json` content type.
-	PutApiV3RemotepathmappingIdWithApplicationWildcardPlusJSONBody(ctx context.Context, id string, body PutApiV3RemotepathmappingIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutApiV3RemotepathmappingId performs a PUT /api/v3/remotepathmapping/{id} (the `PutApiV3RemotepathmappingId` operationId) request.
 	// Takes a body of the `application/json` content type.
@@ -4289,12 +4589,18 @@ type ClientInterface interface {
 	// GetFeedV3CalendarRadarrIcs performs a GET /feed/v3/calendar/radarr.ics (the `GetFeedV3CalendarRadarrIcs` operationId) request.
 	GetFeedV3CalendarRadarrIcs(ctx context.Context, params *GetFeedV3CalendarRadarrIcsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetLoggedout performs a GET /loggedout (the `GetLoggedout` operationId) request.
+	GetLoggedout(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetLogin performs a GET /login (the `GetLogin` operationId) request.
 	GetLogin(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PostLoginWithBody performs a POST /login (the `PostLogin` operationId) request,
 	// with any type of body and a specified content type.
 	PostLoginWithBody(ctx context.Context, params *PostLoginParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetLoginSso performs a GET /login/sso (the `GetLoginSso` operationId) request.
+	GetLoginSso(ctx context.Context, params *GetLoginSsoParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetLogout performs a GET /logout (the `GetLogout` operationId) request.
 	GetLogout(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -4473,20 +4779,6 @@ func (c *Client) GetApiV3Blocklist(ctx context.Context, params *GetApiV3Blocklis
 // with any type of body and a specified content type.
 func (c *Client) DeleteApiV3BlocklistBulkWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteApiV3BlocklistBulkRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// DeleteApiV3BlocklistBulkWithApplicationWildcardPlusJSONBody performs a DELETE /api/v3/blocklist/bulk (the `DeleteApiV3BlocklistBulk` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) DeleteApiV3BlocklistBulkWithApplicationWildcardPlusJSONBody(ctx context.Context, body DeleteApiV3BlocklistBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteApiV3BlocklistBulkRequestWithApplicationWildcardPlusJSONBody(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4793,20 +5085,6 @@ func (c *Client) PutApiV3ConfigHostIdWithBody(ctx context.Context, id string, co
 	return c.Client.Do(req)
 }
 
-// PutApiV3ConfigHostIdWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/config/host/{id} (the `PutApiV3ConfigHostId` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) PutApiV3ConfigHostIdWithApplicationWildcardPlusJSONBody(ctx context.Context, id string, body PutApiV3ConfigHostIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiV3ConfigHostIdRequestWithApplicationWildcardPlusJSONBody(c.Server, id, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // PutApiV3ConfigHostId performs a PUT /api/v3/config/host/{id} (the `PutApiV3ConfigHostId` operationId) request.
 // Takes a body of the `application/json` content type.
 func (c *Client) PutApiV3ConfigHostId(ctx context.Context, id string, body PutApiV3ConfigHostIdJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -5080,20 +5358,6 @@ func (c *Client) GetApiV3ConfigNamingId(ctx context.Context, id int32, reqEditor
 // with any type of body and a specified content type.
 func (c *Client) PutApiV3ConfigNamingIdWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV3ConfigNamingIdRequestWithBody(c.Server, id, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PutApiV3ConfigNamingIdWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/config/naming/{id} (the `PutApiV3ConfigNamingId` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) PutApiV3ConfigNamingIdWithApplicationWildcardPlusJSONBody(ctx context.Context, id string, body PutApiV3ConfigNamingIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiV3ConfigNamingIdRequestWithApplicationWildcardPlusJSONBody(c.Server, id, body)
 	if err != nil {
 		return nil, err
 	}
@@ -5867,20 +6131,6 @@ func (c *Client) DeleteApiV3ExclusionsBulkWithBody(ctx context.Context, contentT
 	return c.Client.Do(req)
 }
 
-// DeleteApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBody performs a DELETE /api/v3/exclusions/bulk (the `DeleteApiV3ExclusionsBulk` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) DeleteApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBody(ctx context.Context, body DeleteApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteApiV3ExclusionsBulkRequestWithApplicationWildcardPlusJSONBody(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // DeleteApiV3ExclusionsBulk performs a DELETE /api/v3/exclusions/bulk (the `DeleteApiV3ExclusionsBulk` operationId) request.
 // Takes a body of the `application/json` content type.
 func (c *Client) DeleteApiV3ExclusionsBulk(ctx context.Context, body DeleteApiV3ExclusionsBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -5899,20 +6149,6 @@ func (c *Client) DeleteApiV3ExclusionsBulk(ctx context.Context, body DeleteApiV3
 // with any type of body and a specified content type.
 func (c *Client) PostApiV3ExclusionsBulkWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPostApiV3ExclusionsBulkRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PostApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBody performs a POST /api/v3/exclusions/bulk (the `PostApiV3ExclusionsBulk` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) PostApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBody(ctx context.Context, body PostApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiV3ExclusionsBulkRequestWithApplicationWildcardPlusJSONBody(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -6263,20 +6499,6 @@ func (c *Client) GetApiV3ImportlistMovie(ctx context.Context, params *GetApiV3Im
 // with any type of body and a specified content type.
 func (c *Client) PostApiV3ImportlistMovieWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPostApiV3ImportlistMovieRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PostApiV3ImportlistMovieWithApplicationWildcardPlusJSONBody performs a POST /api/v3/importlist/movie (the `PostApiV3ImportlistMovie` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) PostApiV3ImportlistMovieWithApplicationWildcardPlusJSONBody(ctx context.Context, body PostApiV3ImportlistMovieApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiV3ImportlistMovieRequestWithApplicationWildcardPlusJSONBody(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -7058,20 +7280,6 @@ func (c *Client) DeleteApiV3MovieEditorWithBody(ctx context.Context, contentType
 	return c.Client.Do(req)
 }
 
-// DeleteApiV3MovieEditorWithApplicationWildcardPlusJSONBody performs a DELETE /api/v3/movie/editor (the `DeleteApiV3MovieEditor` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) DeleteApiV3MovieEditorWithApplicationWildcardPlusJSONBody(ctx context.Context, body DeleteApiV3MovieEditorApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteApiV3MovieEditorRequestWithApplicationWildcardPlusJSONBody(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // DeleteApiV3MovieEditor performs a DELETE /api/v3/movie/editor (the `DeleteApiV3MovieEditor` operationId) request.
 // Takes a body of the `application/json` content type.
 func (c *Client) DeleteApiV3MovieEditor(ctx context.Context, body DeleteApiV3MovieEditorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -7090,20 +7298,6 @@ func (c *Client) DeleteApiV3MovieEditor(ctx context.Context, body DeleteApiV3Mov
 // with any type of body and a specified content type.
 func (c *Client) PutApiV3MovieEditorWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV3MovieEditorRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PutApiV3MovieEditorWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/movie/editor (the `PutApiV3MovieEditor` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) PutApiV3MovieEditorWithApplicationWildcardPlusJSONBody(ctx context.Context, body PutApiV3MovieEditorApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiV3MovieEditorRequestWithApplicationWildcardPlusJSONBody(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -7645,20 +7839,6 @@ func (c *Client) PutApiV3QualitydefinitionUpdateWithBody(ctx context.Context, co
 	return c.Client.Do(req)
 }
 
-// PutApiV3QualitydefinitionUpdateWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/qualitydefinition/update (the `PutApiV3QualitydefinitionUpdate` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) PutApiV3QualitydefinitionUpdateWithApplicationWildcardPlusJSONBody(ctx context.Context, body PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiV3QualitydefinitionUpdateRequestWithApplicationWildcardPlusJSONBody(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // PutApiV3QualitydefinitionUpdate performs a PUT /api/v3/qualitydefinition/update (the `PutApiV3QualitydefinitionUpdate` operationId) request.
 // Takes a body of the `application/json` content type.
 func (c *Client) PutApiV3QualitydefinitionUpdate(ctx context.Context, body PutApiV3QualitydefinitionUpdateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -7690,20 +7870,6 @@ func (c *Client) GetApiV3QualitydefinitionId(ctx context.Context, id int32, reqE
 // with any type of body and a specified content type.
 func (c *Client) PutApiV3QualitydefinitionIdWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV3QualitydefinitionIdRequestWithBody(c.Server, id, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PutApiV3QualitydefinitionIdWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/qualitydefinition/{id} (the `PutApiV3QualitydefinitionId` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) PutApiV3QualitydefinitionIdWithApplicationWildcardPlusJSONBody(ctx context.Context, id string, body PutApiV3QualitydefinitionIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiV3QualitydefinitionIdRequestWithApplicationWildcardPlusJSONBody(c.Server, id, body)
 	if err != nil {
 		return nil, err
 	}
@@ -7853,20 +8019,6 @@ func (c *Client) GetApiV3Queue(ctx context.Context, params *GetApiV3QueueParams,
 // with any type of body and a specified content type.
 func (c *Client) DeleteApiV3QueueBulkWithBody(ctx context.Context, params *DeleteApiV3QueueBulkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteApiV3QueueBulkRequestWithBody(c.Server, params, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// DeleteApiV3QueueBulkWithApplicationWildcardPlusJSONBody performs a DELETE /api/v3/queue/bulk (the `DeleteApiV3QueueBulk` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) DeleteApiV3QueueBulkWithApplicationWildcardPlusJSONBody(ctx context.Context, params *DeleteApiV3QueueBulkParams, body DeleteApiV3QueueBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteApiV3QueueBulkRequestWithApplicationWildcardPlusJSONBody(c.Server, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -8067,20 +8219,6 @@ func (c *Client) PostApiV3ReleaseprofileWithBody(ctx context.Context, contentTyp
 	return c.Client.Do(req)
 }
 
-// PostApiV3ReleaseprofileWithApplicationWildcardPlusJSONBody performs a POST /api/v3/releaseprofile (the `PostApiV3Releaseprofile` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) PostApiV3ReleaseprofileWithApplicationWildcardPlusJSONBody(ctx context.Context, body PostApiV3ReleaseprofileApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiV3ReleaseprofileRequestWithApplicationWildcardPlusJSONBody(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 // PostApiV3Releaseprofile performs a POST /api/v3/releaseprofile (the `PostApiV3Releaseprofile` operationId) request.
 // Takes a body of the `application/json` content type.
 func (c *Client) PostApiV3Releaseprofile(ctx context.Context, body PostApiV3ReleaseprofileJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -8125,20 +8263,6 @@ func (c *Client) GetApiV3ReleaseprofileId(ctx context.Context, id int32, reqEdit
 // with any type of body and a specified content type.
 func (c *Client) PutApiV3ReleaseprofileIdWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV3ReleaseprofileIdRequestWithBody(c.Server, id, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PutApiV3ReleaseprofileIdWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/releaseprofile/{id} (the `PutApiV3ReleaseprofileId` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) PutApiV3ReleaseprofileIdWithApplicationWildcardPlusJSONBody(ctx context.Context, id string, body PutApiV3ReleaseprofileIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiV3ReleaseprofileIdRequestWithApplicationWildcardPlusJSONBody(c.Server, id, body)
 	if err != nil {
 		return nil, err
 	}
@@ -8234,20 +8358,6 @@ func (c *Client) GetApiV3RemotepathmappingId(ctx context.Context, id int32, reqE
 // with any type of body and a specified content type.
 func (c *Client) PutApiV3RemotepathmappingIdWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV3RemotepathmappingIdRequestWithBody(c.Server, id, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// PutApiV3RemotepathmappingIdWithApplicationWildcardPlusJSONBody performs a PUT /api/v3/remotepathmapping/{id} (the `PutApiV3RemotepathmappingId` operationId) request.
-// Takes a body of the `application/*+json` content type.
-func (c *Client) PutApiV3RemotepathmappingIdWithApplicationWildcardPlusJSONBody(ctx context.Context, id string, body PutApiV3RemotepathmappingIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutApiV3RemotepathmappingIdRequestWithApplicationWildcardPlusJSONBody(c.Server, id, body)
 	if err != nil {
 		return nil, err
 	}
@@ -8681,6 +8791,19 @@ func (c *Client) GetFeedV3CalendarRadarrIcs(ctx context.Context, params *GetFeed
 	return c.Client.Do(req)
 }
 
+// GetLoggedout performs a GET /loggedout (the `GetLoggedout` operationId) request.
+func (c *Client) GetLoggedout(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetLoggedoutRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetLogin performs a GET /login (the `GetLogin` operationId) request.
 func (c *Client) GetLogin(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetLoginRequest(c.Server)
@@ -8698,6 +8821,19 @@ func (c *Client) GetLogin(ctx context.Context, reqEditors ...RequestEditorFn) (*
 // with any type of body and a specified content type.
 func (c *Client) PostLoginWithBody(ctx context.Context, params *PostLoginParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPostLoginRequestWithBody(c.Server, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetLoginSso performs a GET /login/sso (the `GetLoginSso` operationId) request.
+func (c *Client) GetLoginSso(ctx context.Context, params *GetLoginSsoParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetLoginSsoRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -9208,17 +9344,6 @@ func NewGetApiV3BlocklistRequest(server string, params *GetApiV3BlocklistParams)
 	}
 
 	return req, nil
-}
-
-// NewDeleteApiV3BlocklistBulkRequestWithApplicationWildcardPlusJSONBody calls the generic DeleteApiV3BlocklistBulk builder with application/*+json body
-func NewDeleteApiV3BlocklistBulkRequestWithApplicationWildcardPlusJSONBody(server string, body DeleteApiV3BlocklistBulkApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewDeleteApiV3BlocklistBulkRequestWithBody(server, "application/*+json", bodyReader)
 }
 
 // NewDeleteApiV3BlocklistBulkRequest calls the generic DeleteApiV3BlocklistBulk builder with application/json body
@@ -9918,17 +10043,6 @@ func NewGetApiV3ConfigHostIdRequest(server string, id int32) (*http.Request, err
 	return req, nil
 }
 
-// NewPutApiV3ConfigHostIdRequestWithApplicationWildcardPlusJSONBody calls the generic PutApiV3ConfigHostId builder with application/*+json body
-func NewPutApiV3ConfigHostIdRequestWithApplicationWildcardPlusJSONBody(server string, id string, body PutApiV3ConfigHostIdApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPutApiV3ConfigHostIdRequestWithBody(server, id, "application/*+json", bodyReader)
-}
-
 // NewPutApiV3ConfigHostIdRequest calls the generic PutApiV3ConfigHostId builder with application/json body
 func NewPutApiV3ConfigHostIdRequest(server string, id string, body PutApiV3ConfigHostIdJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -10593,17 +10707,6 @@ func NewGetApiV3ConfigNamingIdRequest(server string, id int32) (*http.Request, e
 	}
 
 	return req, nil
-}
-
-// NewPutApiV3ConfigNamingIdRequestWithApplicationWildcardPlusJSONBody calls the generic PutApiV3ConfigNamingId builder with application/*+json body
-func NewPutApiV3ConfigNamingIdRequestWithApplicationWildcardPlusJSONBody(server string, id string, body PutApiV3ConfigNamingIdApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPutApiV3ConfigNamingIdRequestWithBody(server, id, "application/*+json", bodyReader)
 }
 
 // NewPutApiV3ConfigNamingIdRequest calls the generic PutApiV3ConfigNamingId builder with application/json body
@@ -12153,17 +12256,6 @@ func NewPostApiV3ExclusionsRequestWithBody(server string, contentType string, bo
 	return req, nil
 }
 
-// NewDeleteApiV3ExclusionsBulkRequestWithApplicationWildcardPlusJSONBody calls the generic DeleteApiV3ExclusionsBulk builder with application/*+json body
-func NewDeleteApiV3ExclusionsBulkRequestWithApplicationWildcardPlusJSONBody(server string, body DeleteApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewDeleteApiV3ExclusionsBulkRequestWithBody(server, "application/*+json", bodyReader)
-}
-
 // NewDeleteApiV3ExclusionsBulkRequest calls the generic DeleteApiV3ExclusionsBulk builder with application/json body
 func NewDeleteApiV3ExclusionsBulkRequest(server string, body DeleteApiV3ExclusionsBulkJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -12202,17 +12294,6 @@ func NewDeleteApiV3ExclusionsBulkRequestWithBody(server string, contentType stri
 	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
-}
-
-// NewPostApiV3ExclusionsBulkRequestWithApplicationWildcardPlusJSONBody calls the generic PostApiV3ExclusionsBulk builder with application/*+json body
-func NewPostApiV3ExclusionsBulkRequestWithApplicationWildcardPlusJSONBody(server string, body PostApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPostApiV3ExclusionsBulkRequestWithBody(server, "application/*+json", bodyReader)
 }
 
 // NewPostApiV3ExclusionsBulkRequest calls the generic PostApiV3ExclusionsBulk builder with application/json body
@@ -13376,17 +13457,6 @@ func NewGetApiV3ImportlistMovieRequest(server string, params *GetApiV3Importlist
 	}
 
 	return req, nil
-}
-
-// NewPostApiV3ImportlistMovieRequestWithApplicationWildcardPlusJSONBody calls the generic PostApiV3ImportlistMovie builder with application/*+json body
-func NewPostApiV3ImportlistMovieRequestWithApplicationWildcardPlusJSONBody(server string, body PostApiV3ImportlistMovieApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPostApiV3ImportlistMovieRequestWithBody(server, "application/*+json", bodyReader)
 }
 
 // NewPostApiV3ImportlistMovieRequest calls the generic PostApiV3ImportlistMovie builder with application/json body
@@ -15235,17 +15305,6 @@ func NewPostApiV3MovieRequestWithBody(server string, contentType string, body io
 	return req, nil
 }
 
-// NewDeleteApiV3MovieEditorRequestWithApplicationWildcardPlusJSONBody calls the generic DeleteApiV3MovieEditor builder with application/*+json body
-func NewDeleteApiV3MovieEditorRequestWithApplicationWildcardPlusJSONBody(server string, body DeleteApiV3MovieEditorApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewDeleteApiV3MovieEditorRequestWithBody(server, "application/*+json", bodyReader)
-}
-
 // NewDeleteApiV3MovieEditorRequest calls the generic DeleteApiV3MovieEditor builder with application/json body
 func NewDeleteApiV3MovieEditorRequest(server string, body DeleteApiV3MovieEditorJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -15284,17 +15343,6 @@ func NewDeleteApiV3MovieEditorRequestWithBody(server string, contentType string,
 	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
-}
-
-// NewPutApiV3MovieEditorRequestWithApplicationWildcardPlusJSONBody calls the generic PutApiV3MovieEditor builder with application/*+json body
-func NewPutApiV3MovieEditorRequestWithApplicationWildcardPlusJSONBody(server string, body PutApiV3MovieEditorApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPutApiV3MovieEditorRequestWithBody(server, "application/*+json", bodyReader)
 }
 
 // NewPutApiV3MovieEditorRequest calls the generic PutApiV3MovieEditor builder with application/json body
@@ -16567,17 +16615,6 @@ func NewGetApiV3QualitydefinitionLimitsRequest(server string) (*http.Request, er
 	return req, nil
 }
 
-// NewPutApiV3QualitydefinitionUpdateRequestWithApplicationWildcardPlusJSONBody calls the generic PutApiV3QualitydefinitionUpdate builder with application/*+json body
-func NewPutApiV3QualitydefinitionUpdateRequestWithApplicationWildcardPlusJSONBody(server string, body PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPutApiV3QualitydefinitionUpdateRequestWithBody(server, "application/*+json", bodyReader)
-}
-
 // NewPutApiV3QualitydefinitionUpdateRequest calls the generic PutApiV3QualitydefinitionUpdate builder with application/json body
 func NewPutApiV3QualitydefinitionUpdateRequest(server string, body PutApiV3QualitydefinitionUpdateJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -16650,17 +16687,6 @@ func NewGetApiV3QualitydefinitionIdRequest(server string, id int32) (*http.Reque
 	}
 
 	return req, nil
-}
-
-// NewPutApiV3QualitydefinitionIdRequestWithApplicationWildcardPlusJSONBody calls the generic PutApiV3QualitydefinitionId builder with application/*+json body
-func NewPutApiV3QualitydefinitionIdRequestWithApplicationWildcardPlusJSONBody(server string, id string, body PutApiV3QualitydefinitionIdApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPutApiV3QualitydefinitionIdRequestWithBody(server, id, "application/*+json", bodyReader)
 }
 
 // NewPutApiV3QualitydefinitionIdRequest calls the generic PutApiV3QualitydefinitionId builder with application/json body
@@ -17091,17 +17117,6 @@ func NewGetApiV3QueueRequest(server string, params *GetApiV3QueueParams) (*http.
 	}
 
 	return req, nil
-}
-
-// NewDeleteApiV3QueueBulkRequestWithApplicationWildcardPlusJSONBody calls the generic DeleteApiV3QueueBulk builder with application/*+json body
-func NewDeleteApiV3QueueBulkRequestWithApplicationWildcardPlusJSONBody(server string, params *DeleteApiV3QueueBulkParams, body DeleteApiV3QueueBulkApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewDeleteApiV3QueueBulkRequestWithBody(server, params, "application/*+json", bodyReader)
 }
 
 // NewDeleteApiV3QueueBulkRequest calls the generic DeleteApiV3QueueBulk builder with application/json body
@@ -17632,17 +17647,6 @@ func NewGetApiV3ReleaseprofileRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
-// NewPostApiV3ReleaseprofileRequestWithApplicationWildcardPlusJSONBody calls the generic PostApiV3Releaseprofile builder with application/*+json body
-func NewPostApiV3ReleaseprofileRequestWithApplicationWildcardPlusJSONBody(server string, body PostApiV3ReleaseprofileApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPostApiV3ReleaseprofileRequestWithBody(server, "application/*+json", bodyReader)
-}
-
 // NewPostApiV3ReleaseprofileRequest calls the generic PostApiV3Releaseprofile builder with application/json body
 func NewPostApiV3ReleaseprofileRequest(server string, body PostApiV3ReleaseprofileJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -17749,17 +17753,6 @@ func NewGetApiV3ReleaseprofileIdRequest(server string, id int32) (*http.Request,
 	}
 
 	return req, nil
-}
-
-// NewPutApiV3ReleaseprofileIdRequestWithApplicationWildcardPlusJSONBody calls the generic PutApiV3ReleaseprofileId builder with application/*+json body
-func NewPutApiV3ReleaseprofileIdRequestWithApplicationWildcardPlusJSONBody(server string, id string, body PutApiV3ReleaseprofileIdApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPutApiV3ReleaseprofileIdRequestWithBody(server, id, "application/*+json", bodyReader)
 }
 
 // NewPutApiV3ReleaseprofileIdRequest calls the generic PutApiV3ReleaseprofileId builder with application/json body
@@ -17942,17 +17935,6 @@ func NewGetApiV3RemotepathmappingIdRequest(server string, id int32) (*http.Reque
 	}
 
 	return req, nil
-}
-
-// NewPutApiV3RemotepathmappingIdRequestWithApplicationWildcardPlusJSONBody calls the generic PutApiV3RemotepathmappingId builder with application/*+json body
-func NewPutApiV3RemotepathmappingIdRequestWithApplicationWildcardPlusJSONBody(server string, id string, body PutApiV3RemotepathmappingIdApplicationWildcardPlusJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPutApiV3RemotepathmappingIdRequestWithBody(server, id, "application/*+json", bodyReader)
 }
 
 // NewPutApiV3RemotepathmappingIdRequest calls the generic PutApiV3RemotepathmappingId builder with application/json body
@@ -19119,6 +19101,33 @@ func NewGetFeedV3CalendarRadarrIcsRequest(server string, params *GetFeedV3Calend
 	return req, nil
 }
 
+// NewGetLoggedoutRequest constructs an http.Request for the GetLoggedout method
+func NewGetLoggedoutRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/loggedout")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetLoginRequest constructs an http.Request for the GetLogin method
 func NewGetLoginRequest(server string) (*http.Request, error) {
 	var err error
@@ -19198,6 +19207,60 @@ func NewPostLoginRequestWithBody(server string, params *PostLoginParams, content
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetLoginSsoRequest constructs an http.Request for the GetLoginSso method
+func NewGetLoginSsoRequest(server string, params *GetLoginSsoParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/login/sso")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.ReturnUrl != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "returnUrl", *params.ReturnUrl, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -19427,10 +19490,6 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	DeleteApiV3BlocklistBulkWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteApiV3BlocklistBulkResponse, error)
 
-	// DeleteApiV3BlocklistBulkWithApplicationWildcardPlusJSONBodyWithResponse performs a DELETE /api/v3/blocklist/bulk (the `DeleteApiV3BlocklistBulk` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	DeleteApiV3BlocklistBulkWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body DeleteApiV3BlocklistBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3BlocklistBulkResponse, error)
-
 	// DeleteApiV3BlocklistBulkWithResponse performs a DELETE /api/v3/blocklist/bulk (the `DeleteApiV3BlocklistBulk` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	DeleteApiV3BlocklistBulkWithResponse(ctx context.Context, body DeleteApiV3BlocklistBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3BlocklistBulkResponse, error)
@@ -19541,10 +19600,6 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	PutApiV3ConfigHostIdWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3ConfigHostIdResponse, error)
 
-	// PutApiV3ConfigHostIdWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/config/host/{id} (the `PutApiV3ConfigHostId` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	PutApiV3ConfigHostIdWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, id string, body PutApiV3ConfigHostIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3ConfigHostIdResponse, error)
-
 	// PutApiV3ConfigHostIdWithResponse performs a PUT /api/v3/config/host/{id} (the `PutApiV3ConfigHostId` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	PutApiV3ConfigHostIdWithResponse(ctx context.Context, id string, body PutApiV3ConfigHostIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3ConfigHostIdResponse, error)
@@ -19649,10 +19704,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	PutApiV3ConfigNamingIdWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3ConfigNamingIdResponse, error)
-
-	// PutApiV3ConfigNamingIdWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/config/naming/{id} (the `PutApiV3ConfigNamingId` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	PutApiV3ConfigNamingIdWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, id string, body PutApiV3ConfigNamingIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3ConfigNamingIdResponse, error)
 
 	// PutApiV3ConfigNamingIdWithResponse performs a PUT /api/v3/config/naming/{id} (the `PutApiV3ConfigNamingId` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -19936,10 +19987,6 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	DeleteApiV3ExclusionsBulkWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteApiV3ExclusionsBulkResponse, error)
 
-	// DeleteApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBodyWithResponse performs a DELETE /api/v3/exclusions/bulk (the `DeleteApiV3ExclusionsBulk` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	DeleteApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body DeleteApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3ExclusionsBulkResponse, error)
-
 	// DeleteApiV3ExclusionsBulkWithResponse performs a DELETE /api/v3/exclusions/bulk (the `DeleteApiV3ExclusionsBulk` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	DeleteApiV3ExclusionsBulkWithResponse(ctx context.Context, body DeleteApiV3ExclusionsBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3ExclusionsBulkResponse, error)
@@ -19949,10 +19996,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	PostApiV3ExclusionsBulkWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV3ExclusionsBulkResponse, error)
-
-	// PostApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBodyWithResponse performs a POST /api/v3/exclusions/bulk (the `PostApiV3ExclusionsBulk` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	PostApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PostApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3ExclusionsBulkResponse, error)
 
 	// PostApiV3ExclusionsBulkWithResponse performs a POST /api/v3/exclusions/bulk (the `PostApiV3ExclusionsBulk` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -20083,10 +20126,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	PostApiV3ImportlistMovieWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV3ImportlistMovieResponse, error)
-
-	// PostApiV3ImportlistMovieWithApplicationWildcardPlusJSONBodyWithResponse performs a POST /api/v3/importlist/movie (the `PostApiV3ImportlistMovie` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	PostApiV3ImportlistMovieWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PostApiV3ImportlistMovieApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3ImportlistMovieResponse, error)
 
 	// PostApiV3ImportlistMovieWithResponse performs a POST /api/v3/importlist/movie (the `PostApiV3ImportlistMovie` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -20373,10 +20412,6 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	DeleteApiV3MovieEditorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteApiV3MovieEditorResponse, error)
 
-	// DeleteApiV3MovieEditorWithApplicationWildcardPlusJSONBodyWithResponse performs a DELETE /api/v3/movie/editor (the `DeleteApiV3MovieEditor` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	DeleteApiV3MovieEditorWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body DeleteApiV3MovieEditorApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3MovieEditorResponse, error)
-
 	// DeleteApiV3MovieEditorWithResponse performs a DELETE /api/v3/movie/editor (the `DeleteApiV3MovieEditor` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	DeleteApiV3MovieEditorWithResponse(ctx context.Context, body DeleteApiV3MovieEditorJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3MovieEditorResponse, error)
@@ -20386,10 +20421,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	PutApiV3MovieEditorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3MovieEditorResponse, error)
-
-	// PutApiV3MovieEditorWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/movie/editor (the `PutApiV3MovieEditor` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	PutApiV3MovieEditorWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PutApiV3MovieEditorApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3MovieEditorResponse, error)
 
 	// PutApiV3MovieEditorWithResponse performs a PUT /api/v3/movie/editor (the `PutApiV3MovieEditor` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -20590,10 +20621,6 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	PutApiV3QualitydefinitionUpdateWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3QualitydefinitionUpdateResponse, error)
 
-	// PutApiV3QualitydefinitionUpdateWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/qualitydefinition/update (the `PutApiV3QualitydefinitionUpdate` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	PutApiV3QualitydefinitionUpdateWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3QualitydefinitionUpdateResponse, error)
-
 	// PutApiV3QualitydefinitionUpdateWithResponse performs a PUT /api/v3/qualitydefinition/update (the `PutApiV3QualitydefinitionUpdate` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	PutApiV3QualitydefinitionUpdateWithResponse(ctx context.Context, body PutApiV3QualitydefinitionUpdateJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3QualitydefinitionUpdateResponse, error)
@@ -20608,10 +20635,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	PutApiV3QualitydefinitionIdWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3QualitydefinitionIdResponse, error)
-
-	// PutApiV3QualitydefinitionIdWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/qualitydefinition/{id} (the `PutApiV3QualitydefinitionId` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	PutApiV3QualitydefinitionIdWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, id string, body PutApiV3QualitydefinitionIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3QualitydefinitionIdResponse, error)
 
 	// PutApiV3QualitydefinitionIdWithResponse performs a PUT /api/v3/qualitydefinition/{id} (the `PutApiV3QualitydefinitionId` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -20667,10 +20690,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	DeleteApiV3QueueBulkWithBodyWithResponse(ctx context.Context, params *DeleteApiV3QueueBulkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteApiV3QueueBulkResponse, error)
-
-	// DeleteApiV3QueueBulkWithApplicationWildcardPlusJSONBodyWithResponse performs a DELETE /api/v3/queue/bulk (the `DeleteApiV3QueueBulk` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	DeleteApiV3QueueBulkWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, params *DeleteApiV3QueueBulkParams, body DeleteApiV3QueueBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3QueueBulkResponse, error)
 
 	// DeleteApiV3QueueBulkWithResponse performs a DELETE /api/v3/queue/bulk (the `DeleteApiV3QueueBulk` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -20742,10 +20761,6 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	PostApiV3ReleaseprofileWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV3ReleaseprofileResponse, error)
 
-	// PostApiV3ReleaseprofileWithApplicationWildcardPlusJSONBodyWithResponse performs a POST /api/v3/releaseprofile (the `PostApiV3Releaseprofile` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	PostApiV3ReleaseprofileWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PostApiV3ReleaseprofileApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3ReleaseprofileResponse, error)
-
 	// PostApiV3ReleaseprofileWithResponse performs a POST /api/v3/releaseprofile (the `PostApiV3Releaseprofile` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	PostApiV3ReleaseprofileWithResponse(ctx context.Context, body PostApiV3ReleaseprofileJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3ReleaseprofileResponse, error)
@@ -20765,10 +20780,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	PutApiV3ReleaseprofileIdWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3ReleaseprofileIdResponse, error)
-
-	// PutApiV3ReleaseprofileIdWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/releaseprofile/{id} (the `PutApiV3ReleaseprofileId` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	PutApiV3ReleaseprofileIdWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, id string, body PutApiV3ReleaseprofileIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3ReleaseprofileIdResponse, error)
 
 	// PutApiV3ReleaseprofileIdWithResponse performs a PUT /api/v3/releaseprofile/{id} (the `PutApiV3ReleaseprofileId` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -20804,10 +20815,6 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	PutApiV3RemotepathmappingIdWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3RemotepathmappingIdResponse, error)
-
-	// PutApiV3RemotepathmappingIdWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/remotepathmapping/{id} (the `PutApiV3RemotepathmappingId` operationId) request.
-	// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-	PutApiV3RemotepathmappingIdWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, id string, body PutApiV3RemotepathmappingIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3RemotepathmappingIdResponse, error)
 
 	// PutApiV3RemotepathmappingIdWithResponse performs a PUT /api/v3/remotepathmapping/{id} (the `PutApiV3RemotepathmappingId` operationId) request.
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
@@ -20968,6 +20975,11 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	GetFeedV3CalendarRadarrIcsWithResponse(ctx context.Context, params *GetFeedV3CalendarRadarrIcsParams, reqEditors ...RequestEditorFn) (*GetFeedV3CalendarRadarrIcsResponse, error)
 
+	// GetLoggedoutWithResponse performs a GET /loggedout (the `GetLoggedout` operationId) request.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	GetLoggedoutWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetLoggedoutResponse, error)
+
 	// GetLoginWithResponse performs a GET /login (the `GetLogin` operationId) request.
 	//
 	// Returns a wrapper object for the known response body format(s).
@@ -20978,6 +20990,11 @@ type ClientWithResponsesInterface interface {
 	//
 	// Returns a wrapper object for the known response body format(s).
 	PostLoginWithBodyWithResponse(ctx context.Context, params *PostLoginParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostLoginResponse, error)
+
+	// GetLoginSsoWithResponse performs a GET /login/sso (the `GetLoginSso` operationId) request.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	GetLoginSsoWithResponse(ctx context.Context, params *GetLoginSsoParams, reqEditors ...RequestEditorFn) (*GetLoginSsoResponse, error)
 
 	// GetLogoutWithResponse performs a GET /logout (the `GetLogout` operationId) request.
 	//
@@ -21167,13 +21184,13 @@ func (r GetApiV3AutotaggingResponse) ContentType() string {
 type PostApiV3AutotaggingResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *AutoTaggingResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *AutoTaggingResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3AutotaggingResponse) GetJSON200() *AutoTaggingResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3AutotaggingResponse) GetJSON201() *AutoTaggingResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -21208,6 +21225,13 @@ func (r PostApiV3AutotaggingResponse) ContentType() string {
 type GetApiV3AutotaggingSchemaResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]AutoTaggingSpecificationSchema
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiV3AutotaggingSchemaResponse) GetJSON200() *[]AutoTaggingSpecificationSchema {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -21317,13 +21341,13 @@ func (r GetApiV3AutotaggingIdResponse) ContentType() string {
 type PutApiV3AutotaggingIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *AutoTaggingResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *AutoTaggingResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3AutotaggingIdResponse) GetJSON200() *AutoTaggingResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3AutotaggingIdResponse) GetJSON202() *AutoTaggingResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -21399,6 +21423,13 @@ func (r GetApiV3BlocklistResponse) ContentType() string {
 type DeleteApiV3BlocklistBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3BlocklistBulkResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -21590,6 +21621,13 @@ func (r GetApiV3CollectionResponse) ContentType() string {
 type PutApiV3CollectionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]CollectionResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PutApiV3CollectionResponse) GetJSON200() *[]CollectionResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -21665,13 +21703,13 @@ func (r GetApiV3CollectionIdResponse) ContentType() string {
 type PutApiV3CollectionIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *CollectionResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *CollectionResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3CollectionIdResponse) GetJSON200() *CollectionResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3CollectionIdResponse) GetJSON202() *CollectionResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -21747,13 +21785,13 @@ func (r GetApiV3CommandResponse) ContentType() string {
 type PostApiV3CommandResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *CommandResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *CommandResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3CommandResponse) GetJSON200() *CommandResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3CommandResponse) GetJSON201() *CommandResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -21945,13 +21983,13 @@ func (r GetApiV3ConfigDownloadclientIdResponse) ContentType() string {
 type PutApiV3ConfigDownloadclientIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *DownloadClientConfigResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *DownloadClientConfigResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ConfigDownloadclientIdResponse) GetJSON200() *DownloadClientConfigResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ConfigDownloadclientIdResponse) GetJSON202() *DownloadClientConfigResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -22068,13 +22106,13 @@ func (r GetApiV3ConfigHostIdResponse) ContentType() string {
 type PutApiV3ConfigHostIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *HostConfigResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *HostConfigResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ConfigHostIdResponse) GetJSON200() *HostConfigResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ConfigHostIdResponse) GetJSON202() *HostConfigResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -22191,13 +22229,13 @@ func (r GetApiV3ConfigImportlistIdResponse) ContentType() string {
 type PutApiV3ConfigImportlistIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ImportListConfigResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *ImportListConfigResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ConfigImportlistIdResponse) GetJSON200() *ImportListConfigResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ConfigImportlistIdResponse) GetJSON202() *ImportListConfigResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -22314,13 +22352,13 @@ func (r GetApiV3ConfigIndexerIdResponse) ContentType() string {
 type PutApiV3ConfigIndexerIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *IndexerConfigResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *IndexerConfigResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ConfigIndexerIdResponse) GetJSON200() *IndexerConfigResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ConfigIndexerIdResponse) GetJSON202() *IndexerConfigResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -22437,13 +22475,13 @@ func (r GetApiV3ConfigMediamanagementIdResponse) ContentType() string {
 type PutApiV3ConfigMediamanagementIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *MediaManagementConfigResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *MediaManagementConfigResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ConfigMediamanagementIdResponse) GetJSON200() *MediaManagementConfigResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ConfigMediamanagementIdResponse) GetJSON202() *MediaManagementConfigResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -22560,13 +22598,13 @@ func (r GetApiV3ConfigMetadataIdResponse) ContentType() string {
 type PutApiV3ConfigMetadataIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *MetadataConfigResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *MetadataConfigResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ConfigMetadataIdResponse) GetJSON200() *MetadataConfigResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ConfigMetadataIdResponse) GetJSON202() *MetadataConfigResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -22642,6 +22680,13 @@ func (r GetApiV3ConfigNamingResponse) ContentType() string {
 type GetApiV3ConfigNamingExamplesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *NamingExampleResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiV3ConfigNamingExamplesResponse) GetJSON200() *NamingExampleResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -22717,13 +22762,13 @@ func (r GetApiV3ConfigNamingIdResponse) ContentType() string {
 type PutApiV3ConfigNamingIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *NamingConfigResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *NamingConfigResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ConfigNamingIdResponse) GetJSON200() *NamingConfigResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ConfigNamingIdResponse) GetJSON202() *NamingConfigResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -22840,13 +22885,13 @@ func (r GetApiV3ConfigUiIdResponse) ContentType() string {
 type PutApiV3ConfigUiIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *UiConfigResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *UiConfigResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ConfigUiIdResponse) GetJSON200() *UiConfigResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ConfigUiIdResponse) GetJSON202() *UiConfigResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -22881,6 +22926,13 @@ func (r PutApiV3ConfigUiIdResponse) ContentType() string {
 type GetApiV3CreditResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]CreditResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiV3CreditResponse) GetJSON200() *[]CreditResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -22997,13 +23049,13 @@ func (r GetApiV3CustomfilterResponse) ContentType() string {
 type PostApiV3CustomfilterResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *CustomFilterResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *CustomFilterResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3CustomfilterResponse) GetJSON200() *CustomFilterResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3CustomfilterResponse) GetJSON201() *CustomFilterResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -23113,13 +23165,13 @@ func (r GetApiV3CustomfilterIdResponse) ContentType() string {
 type PutApiV3CustomfilterIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *CustomFilterResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *CustomFilterResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3CustomfilterIdResponse) GetJSON200() *CustomFilterResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3CustomfilterIdResponse) GetJSON202() *CustomFilterResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -23195,13 +23247,13 @@ func (r GetApiV3CustomformatResponse) ContentType() string {
 type PostApiV3CustomformatResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *CustomFormatResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *CustomFormatResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3CustomformatResponse) GetJSON200() *CustomFormatResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3CustomformatResponse) GetJSON201() *CustomFormatResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -23236,6 +23288,13 @@ func (r PostApiV3CustomformatResponse) ContentType() string {
 type DeleteApiV3CustomformatBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3CustomformatBulkResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -23271,11 +23330,11 @@ type PutApiV3CustomformatBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *CustomFormatResource
+	JSON200 *[]CustomFormatResource
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3CustomformatBulkResponse) GetJSON200() *CustomFormatResource {
+func (r PutApiV3CustomformatBulkResponse) GetJSON200() *[]CustomFormatResource {
 	return r.JSON200
 }
 
@@ -23311,6 +23370,13 @@ func (r PutApiV3CustomformatBulkResponse) ContentType() string {
 type GetApiV3CustomformatSchemaResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]CustomFormatSpecificationSchema
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiV3CustomformatSchemaResponse) GetJSON200() *[]CustomFormatSpecificationSchema {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -23420,13 +23486,13 @@ func (r GetApiV3CustomformatIdResponse) ContentType() string {
 type PutApiV3CustomformatIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *CustomFormatResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *CustomFormatResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3CustomformatIdResponse) GetJSON200() *CustomFormatResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3CustomformatIdResponse) GetJSON202() *CustomFormatResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -23502,13 +23568,13 @@ func (r GetApiV3DelayprofileResponse) ContentType() string {
 type PostApiV3DelayprofileResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *DelayProfileResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *DelayProfileResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3DelayprofileResponse) GetJSON200() *DelayProfileResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3DelayprofileResponse) GetJSON201() *DelayProfileResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -23659,13 +23725,13 @@ func (r GetApiV3DelayprofileIdResponse) ContentType() string {
 type PutApiV3DelayprofileIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *DelayProfileResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *DelayProfileResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3DelayprofileIdResponse) GetJSON200() *DelayProfileResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3DelayprofileIdResponse) GetJSON202() *DelayProfileResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -23782,13 +23848,13 @@ func (r GetApiV3DownloadclientResponse) ContentType() string {
 type PostApiV3DownloadclientResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *DownloadClientResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *DownloadClientResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3DownloadclientResponse) GetJSON200() *DownloadClientResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3DownloadclientResponse) GetJSON201() *DownloadClientResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -23857,6 +23923,13 @@ func (r PostApiV3DownloadclientActionNameResponse) ContentType() string {
 type DeleteApiV3DownloadclientBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3DownloadclientBulkResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -23892,11 +23965,11 @@ type PutApiV3DownloadclientBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *DownloadClientResource
+	JSON200 *[]DownloadClientResource
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3DownloadclientBulkResponse) GetJSON200() *DownloadClientResource {
+func (r PutApiV3DownloadclientBulkResponse) GetJSON200() *[]DownloadClientResource {
 	return r.JSON200
 }
 
@@ -24007,6 +24080,20 @@ func (r PostApiV3DownloadclientTestResponse) ContentType() string {
 type PostApiV3DownloadclientTestallResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]ProviderTestAllResult
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *[]ProviderTestAllResult
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3DownloadclientTestallResponse) GetJSON200() *[]ProviderTestAllResult {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PostApiV3DownloadclientTestallResponse) GetJSON400() *[]ProviderTestAllResult {
+	return r.JSON400
 }
 
 // GetBody returns the raw response body bytes
@@ -24041,6 +24128,13 @@ func (r PostApiV3DownloadclientTestallResponse) ContentType() string {
 type DeleteApiV3DownloadclientIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3DownloadclientIdResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -24116,13 +24210,13 @@ func (r GetApiV3DownloadclientIdResponse) ContentType() string {
 type PutApiV3DownloadclientIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *DownloadClientResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *DownloadClientResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3DownloadclientIdResponse) GetJSON200() *DownloadClientResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3DownloadclientIdResponse) GetJSON202() *DownloadClientResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -24198,13 +24292,13 @@ func (r GetApiV3ExclusionsResponse) ContentType() string {
 type PostApiV3ExclusionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ImportListExclusionResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *ImportListExclusionResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3ExclusionsResponse) GetJSON200() *ImportListExclusionResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3ExclusionsResponse) GetJSON201() *ImportListExclusionResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -24239,6 +24333,13 @@ func (r PostApiV3ExclusionsResponse) ContentType() string {
 type DeleteApiV3ExclusionsBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3ExclusionsBulkResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -24273,6 +24374,13 @@ func (r DeleteApiV3ExclusionsBulkResponse) ContentType() string {
 type PostApiV3ExclusionsBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]ImportListExclusionResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3ExclusionsBulkResponse) GetJSON200() *[]ImportListExclusionResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -24423,13 +24531,13 @@ func (r GetApiV3ExclusionsIdResponse) ContentType() string {
 type PutApiV3ExclusionsIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ImportListExclusionResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *ImportListExclusionResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ExclusionsIdResponse) GetJSON200() *ImportListExclusionResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ExclusionsIdResponse) GetJSON202() *ImportListExclusionResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -24505,6 +24613,13 @@ func (r GetApiV3ExtrafileResponse) ContentType() string {
 type GetApiV3FilesystemResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *FileSystemResult
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiV3FilesystemResponse) GetJSON200() *FileSystemResult {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -24539,6 +24654,13 @@ func (r GetApiV3FilesystemResponse) ContentType() string {
 type GetApiV3FilesystemMediafilesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]FileSystemMediaFileResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiV3FilesystemMediafilesResponse) GetJSON200() *[]FileSystemMediaFileResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -24573,6 +24695,13 @@ func (r GetApiV3FilesystemMediafilesResponse) ContentType() string {
 type GetApiV3FilesystemTypeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *FileSystemTypeResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiV3FilesystemTypeResponse) GetJSON200() *FileSystemTypeResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -24689,6 +24818,13 @@ func (r GetApiV3HistoryResponse) ContentType() string {
 type PostApiV3HistoryFailedIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3HistoryFailedIdResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -24846,13 +24982,13 @@ func (r GetApiV3ImportlistResponse) ContentType() string {
 type PostApiV3ImportlistResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ImportListResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *ImportListResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3ImportlistResponse) GetJSON200() *ImportListResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3ImportlistResponse) GetJSON201() *ImportListResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -24921,6 +25057,13 @@ func (r PostApiV3ImportlistActionNameResponse) ContentType() string {
 type DeleteApiV3ImportlistBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3ImportlistBulkResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -24956,11 +25099,11 @@ type PutApiV3ImportlistBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ImportListResource
+	JSON200 *[]ImportListResource
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ImportlistBulkResponse) GetJSON200() *ImportListResource {
+func (r PutApiV3ImportlistBulkResponse) GetJSON200() *[]ImportListResource {
 	return r.JSON200
 }
 
@@ -24996,6 +25139,13 @@ func (r PutApiV3ImportlistBulkResponse) ContentType() string {
 type GetApiV3ImportlistMovieResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]ImportListMoviesResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiV3ImportlistMovieResponse) GetJSON200() *[]ImportListMoviesResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -25030,6 +25180,13 @@ func (r GetApiV3ImportlistMovieResponse) ContentType() string {
 type PostApiV3ImportlistMovieResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]MovieResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3ImportlistMovieResponse) GetJSON200() *[]MovieResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -25139,6 +25296,20 @@ func (r PostApiV3ImportlistTestResponse) ContentType() string {
 type PostApiV3ImportlistTestallResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]ProviderTestAllResult
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *[]ProviderTestAllResult
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3ImportlistTestallResponse) GetJSON200() *[]ProviderTestAllResult {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PostApiV3ImportlistTestallResponse) GetJSON400() *[]ProviderTestAllResult {
+	return r.JSON400
 }
 
 // GetBody returns the raw response body bytes
@@ -25173,6 +25344,13 @@ func (r PostApiV3ImportlistTestallResponse) ContentType() string {
 type DeleteApiV3ImportlistIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3ImportlistIdResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -25248,13 +25426,13 @@ func (r GetApiV3ImportlistIdResponse) ContentType() string {
 type PutApiV3ImportlistIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ImportListResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *ImportListResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ImportlistIdResponse) GetJSON200() *ImportListResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ImportlistIdResponse) GetJSON202() *ImportListResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -25330,13 +25508,13 @@ func (r GetApiV3IndexerResponse) ContentType() string {
 type PostApiV3IndexerResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *IndexerResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *IndexerResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3IndexerResponse) GetJSON200() *IndexerResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3IndexerResponse) GetJSON201() *IndexerResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -25405,6 +25583,13 @@ func (r PostApiV3IndexerActionNameResponse) ContentType() string {
 type DeleteApiV3IndexerBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3IndexerBulkResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -25440,11 +25625,11 @@ type PutApiV3IndexerBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *IndexerResource
+	JSON200 *[]IndexerResource
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3IndexerBulkResponse) GetJSON200() *IndexerResource {
+func (r PutApiV3IndexerBulkResponse) GetJSON200() *[]IndexerResource {
 	return r.JSON200
 }
 
@@ -25555,6 +25740,20 @@ func (r PostApiV3IndexerTestResponse) ContentType() string {
 type PostApiV3IndexerTestallResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]ProviderTestAllResult
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *[]ProviderTestAllResult
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3IndexerTestallResponse) GetJSON200() *[]ProviderTestAllResult {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PostApiV3IndexerTestallResponse) GetJSON400() *[]ProviderTestAllResult {
+	return r.JSON400
 }
 
 // GetBody returns the raw response body bytes
@@ -25589,6 +25788,13 @@ func (r PostApiV3IndexerTestallResponse) ContentType() string {
 type DeleteApiV3IndexerIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3IndexerIdResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -25664,13 +25870,13 @@ func (r GetApiV3IndexerIdResponse) ContentType() string {
 type PutApiV3IndexerIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *IndexerResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *IndexerResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3IndexerIdResponse) GetJSON200() *IndexerResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3IndexerIdResponse) GetJSON202() *IndexerResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -25828,13 +26034,6 @@ func (r GetApiV3LanguageIdResponse) ContentType() string {
 type GetApiV3LocalizationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *string
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetApiV3LocalizationResponse) GetJSON200() *string {
-	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -26142,6 +26341,13 @@ func (r GetApiV3ManualimportResponse) ContentType() string {
 type PostApiV3ManualimportResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]ManualImportReprocessResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3ManualimportResponse) GetJSON200() *[]ManualImportReprocessResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -26251,13 +26457,13 @@ func (r GetApiV3MetadataResponse) ContentType() string {
 type PostApiV3MetadataResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *MetadataResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *MetadataResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3MetadataResponse) GetJSON200() *MetadataResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3MetadataResponse) GetJSON201() *MetadataResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -26401,6 +26607,20 @@ func (r PostApiV3MetadataTestResponse) ContentType() string {
 type PostApiV3MetadataTestallResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]ProviderTestAllResult
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *[]ProviderTestAllResult
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3MetadataTestallResponse) GetJSON200() *[]ProviderTestAllResult {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PostApiV3MetadataTestallResponse) GetJSON400() *[]ProviderTestAllResult {
+	return r.JSON400
 }
 
 // GetBody returns the raw response body bytes
@@ -26435,6 +26655,13 @@ func (r PostApiV3MetadataTestallResponse) ContentType() string {
 type DeleteApiV3MetadataIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3MetadataIdResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -26510,13 +26737,13 @@ func (r GetApiV3MetadataIdResponse) ContentType() string {
 type PutApiV3MetadataIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *MetadataResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *MetadataResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3MetadataIdResponse) GetJSON200() *MetadataResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3MetadataIdResponse) GetJSON202() *MetadataResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -26592,13 +26819,13 @@ func (r GetApiV3MovieResponse) ContentType() string {
 type PostApiV3MovieResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *MovieResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *MovieResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3MovieResponse) GetJSON200() *MovieResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3MovieResponse) GetJSON201() *MovieResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -26633,6 +26860,13 @@ func (r PostApiV3MovieResponse) ContentType() string {
 type DeleteApiV3MovieEditorResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3MovieEditorResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -26667,6 +26901,13 @@ func (r DeleteApiV3MovieEditorResponse) ContentType() string {
 type PutApiV3MovieEditorResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]MovieResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PutApiV3MovieEditorResponse) GetJSON200() *[]MovieResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -26940,13 +27181,13 @@ func (r GetApiV3MovieIdResponse) ContentType() string {
 type PutApiV3MovieIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *MovieResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *MovieResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3MovieIdResponse) GetJSON200() *MovieResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3MovieIdResponse) GetJSON202() *MovieResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -26981,6 +27222,13 @@ func (r PutApiV3MovieIdResponse) ContentType() string {
 type GetApiV3MovieIdFolderResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MovieFolderResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiV3MovieIdFolderResponse) GetJSON200() *MovieFolderResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -27056,6 +27304,13 @@ func (r GetApiV3MoviefileResponse) ContentType() string {
 type DeleteApiV3MoviefileBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3MoviefileBulkResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -27090,6 +27345,13 @@ func (r DeleteApiV3MoviefileBulkResponse) ContentType() string {
 type PutApiV3MoviefileBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]MovieFileResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PutApiV3MoviefileBulkResponse) GetJSON200() *[]MovieFileResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -27124,6 +27386,13 @@ func (r PutApiV3MoviefileBulkResponse) ContentType() string {
 type PutApiV3MoviefileEditorResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]MovieFileResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PutApiV3MoviefileEditorResponse) GetJSON200() *[]MovieFileResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -27233,13 +27502,13 @@ func (r GetApiV3MoviefileIdResponse) ContentType() string {
 type PutApiV3MoviefileIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *MovieFileResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *MovieFileResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3MoviefileIdResponse) GetJSON200() *MovieFileResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3MoviefileIdResponse) GetJSON202() *MovieFileResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -27315,13 +27584,13 @@ func (r GetApiV3NotificationResponse) ContentType() string {
 type PostApiV3NotificationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *NotificationResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *NotificationResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3NotificationResponse) GetJSON200() *NotificationResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3NotificationResponse) GetJSON201() *NotificationResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -27465,6 +27734,20 @@ func (r PostApiV3NotificationTestResponse) ContentType() string {
 type PostApiV3NotificationTestallResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]ProviderTestAllResult
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *[]ProviderTestAllResult
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3NotificationTestallResponse) GetJSON200() *[]ProviderTestAllResult {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PostApiV3NotificationTestallResponse) GetJSON400() *[]ProviderTestAllResult {
+	return r.JSON400
 }
 
 // GetBody returns the raw response body bytes
@@ -27499,6 +27782,13 @@ func (r PostApiV3NotificationTestallResponse) ContentType() string {
 type DeleteApiV3NotificationIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3NotificationIdResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -27574,13 +27864,13 @@ func (r GetApiV3NotificationIdResponse) ContentType() string {
 type PutApiV3NotificationIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *NotificationResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *NotificationResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3NotificationIdResponse) GetJSON200() *NotificationResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3NotificationIdResponse) GetJSON202() *NotificationResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -27738,6 +28028,13 @@ func (r GetApiV3QualitydefinitionLimitsResponse) ContentType() string {
 type PutApiV3QualitydefinitionUpdateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]QualityDefinitionResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PutApiV3QualitydefinitionUpdateResponse) GetJSON200() *[]QualityDefinitionResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -27813,13 +28110,13 @@ func (r GetApiV3QualitydefinitionIdResponse) ContentType() string {
 type PutApiV3QualitydefinitionIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *QualityDefinitionResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *QualityDefinitionResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3QualitydefinitionIdResponse) GetJSON200() *QualityDefinitionResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3QualitydefinitionIdResponse) GetJSON202() *QualityDefinitionResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -27895,13 +28192,13 @@ func (r GetApiV3QualityprofileResponse) ContentType() string {
 type PostApiV3QualityprofileResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *QualityProfileResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *QualityProfileResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3QualityprofileResponse) GetJSON200() *QualityProfileResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3QualityprofileResponse) GetJSON201() *QualityProfileResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -28052,13 +28349,13 @@ func (r GetApiV3QualityprofileIdResponse) ContentType() string {
 type PutApiV3QualityprofileIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *QualityProfileResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *QualityProfileResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3QualityprofileIdResponse) GetJSON200() *QualityProfileResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3QualityprofileIdResponse) GetJSON202() *QualityProfileResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -28134,6 +28431,13 @@ func (r GetApiV3QueueResponse) ContentType() string {
 type DeleteApiV3QueueBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3QueueBulkResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -28209,6 +28513,13 @@ func (r GetApiV3QueueDetailsResponse) ContentType() string {
 type PostApiV3QueueGrabBulkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3QueueGrabBulkResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -28243,6 +28554,13 @@ func (r PostApiV3QueueGrabBulkResponse) ContentType() string {
 type PostApiV3QueueGrabIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3QueueGrabIdResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -28393,6 +28711,13 @@ func (r GetApiV3ReleaseResponse) ContentType() string {
 type PostApiV3ReleaseResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ReleaseResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3ReleaseResponse) GetJSON200() *ReleaseResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -28509,13 +28834,13 @@ func (r GetApiV3ReleaseprofileResponse) ContentType() string {
 type PostApiV3ReleaseprofileResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ReleaseProfileResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *ReleaseProfileResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3ReleaseprofileResponse) GetJSON200() *ReleaseProfileResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3ReleaseprofileResponse) GetJSON201() *ReleaseProfileResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -28625,13 +28950,13 @@ func (r GetApiV3ReleaseprofileIdResponse) ContentType() string {
 type PutApiV3ReleaseprofileIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *ReleaseProfileResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *ReleaseProfileResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3ReleaseprofileIdResponse) GetJSON200() *ReleaseProfileResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3ReleaseprofileIdResponse) GetJSON202() *ReleaseProfileResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -28707,13 +29032,13 @@ func (r GetApiV3RemotepathmappingResponse) ContentType() string {
 type PostApiV3RemotepathmappingResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *RemotePathMappingResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *RemotePathMappingResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3RemotepathmappingResponse) GetJSON200() *RemotePathMappingResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3RemotepathmappingResponse) GetJSON201() *RemotePathMappingResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -28946,13 +29271,13 @@ func (r GetApiV3RootfolderResponse) ContentType() string {
 type PostApiV3RootfolderResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *RootFolderResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *RootFolderResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3RootfolderResponse) GetJSON200() *RootFolderResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3RootfolderResponse) GetJSON201() *RootFolderResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -29103,6 +29428,20 @@ func (r GetApiV3SystemBackupResponse) ContentType() string {
 type PostApiV3SystemBackupRestoreUploadResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *BackupRestoreResource
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BackupRestoreErrorResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3SystemBackupRestoreUploadResponse) GetJSON200() *BackupRestoreResource {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r PostApiV3SystemBackupRestoreUploadResponse) GetJSON400() *BackupRestoreErrorResource {
+	return r.JSON400
 }
 
 // GetBody returns the raw response body bytes
@@ -29137,6 +29476,13 @@ func (r PostApiV3SystemBackupRestoreUploadResponse) ContentType() string {
 type PostApiV3SystemBackupRestoreIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *BackupRestoreResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3SystemBackupRestoreIdResponse) GetJSON200() *BackupRestoreResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -29171,6 +29517,13 @@ func (r PostApiV3SystemBackupRestoreIdResponse) ContentType() string {
 type DeleteApiV3SystemBackupIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *interface{}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r DeleteApiV3SystemBackupIdResponse) GetJSON200() *interface{} {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -29205,6 +29558,13 @@ func (r DeleteApiV3SystemBackupIdResponse) ContentType() string {
 type PostApiV3SystemRestartResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SystemRestartResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3SystemRestartResponse) GetJSON200() *SystemRestartResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -29273,6 +29633,13 @@ func (r GetApiV3SystemRoutesResponse) ContentType() string {
 type GetApiV3SystemRoutesDuplicateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *map[string][]string
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetApiV3SystemRoutesDuplicateResponse) GetJSON200() *map[string][]string {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -29307,6 +29674,13 @@ func (r GetApiV3SystemRoutesDuplicateResponse) ContentType() string {
 type PostApiV3SystemShutdownResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SystemShutdownResource
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r PostApiV3SystemShutdownResponse) GetJSON200() *SystemShutdownResource {
+	return r.JSON200
 }
 
 // GetBody returns the raw response body bytes
@@ -29505,13 +29879,13 @@ func (r GetApiV3TagResponse) ContentType() string {
 type PostApiV3TagResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *TagResource
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *TagResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PostApiV3TagResponse) GetJSON200() *TagResource {
-	return r.JSON200
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r PostApiV3TagResponse) GetJSON201() *TagResource {
+	return r.JSON201
 }
 
 // GetBody returns the raw response body bytes
@@ -29703,13 +30077,13 @@ func (r GetApiV3TagIdResponse) ContentType() string {
 type PutApiV3TagIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *TagResource
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *TagResource
 }
 
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r PutApiV3TagIdResponse) GetJSON200() *TagResource {
-	return r.JSON200
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r PutApiV3TagIdResponse) GetJSON202() *TagResource {
+	return r.JSON202
 }
 
 // GetBody returns the raw response body bytes
@@ -29932,6 +30306,40 @@ func (r GetFeedV3CalendarRadarrIcsResponse) ContentType() string {
 	return ""
 }
 
+type GetLoggedoutResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r GetLoggedoutResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetLoggedoutResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetLoggedoutResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetLoggedoutResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetLoginResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -29969,6 +30377,13 @@ func (r GetLoginResponse) ContentType() string {
 type PostLoginResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ProblemDetails
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r PostLoginResponse) GetJSON401() *ProblemDetails {
+	return r.JSON401
 }
 
 // GetBody returns the raw response body bytes
@@ -29994,6 +30409,40 @@ func (r PostLoginResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r PostLoginResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetLoginSsoResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r GetLoginSsoResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetLoginSsoResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetLoginSsoResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetLoginSsoResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -30039,11 +30488,18 @@ type GetPingResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *PingResource
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *PingResource
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r GetPingResponse) GetJSON200() *PingResource {
 	return r.JSON200
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetPingResponse) GetJSON500() *PingResource {
+	return r.JSON500
 }
 
 // GetBody returns the raw response body bytes
@@ -30080,11 +30536,18 @@ type HeadPingResponse struct {
 	HTTPResponse *http.Response
 	// JSON200 the response for an HTTP 200 `application/json` response
 	JSON200 *PingResource
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *PingResource
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
 func (r HeadPingResponse) GetJSON200() *PingResource {
 	return r.JSON200
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r HeadPingResponse) GetJSON500() *PingResource {
+	return r.JSON500
 }
 
 // GetBody returns the raw response body bytes
@@ -30288,16 +30751,6 @@ func (c *ClientWithResponses) GetApiV3BlocklistWithResponse(ctx context.Context,
 // Returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) DeleteApiV3BlocklistBulkWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteApiV3BlocklistBulkResponse, error) {
 	rsp, err := c.DeleteApiV3BlocklistBulkWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteApiV3BlocklistBulkResponse(rsp)
-}
-
-// DeleteApiV3BlocklistBulkWithApplicationWildcardPlusJSONBodyWithResponse performs a DELETE /api/v3/blocklist/bulk (the `DeleteApiV3BlocklistBulk` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) DeleteApiV3BlocklistBulkWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body DeleteApiV3BlocklistBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3BlocklistBulkResponse, error) {
-	rsp, err := c.DeleteApiV3BlocklistBulkWithApplicationWildcardPlusJSONBody(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -30546,16 +30999,6 @@ func (c *ClientWithResponses) PutApiV3ConfigHostIdWithBodyWithResponse(ctx conte
 	return ParsePutApiV3ConfigHostIdResponse(rsp)
 }
 
-// PutApiV3ConfigHostIdWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/config/host/{id} (the `PutApiV3ConfigHostId` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) PutApiV3ConfigHostIdWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, id string, body PutApiV3ConfigHostIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3ConfigHostIdResponse, error) {
-	rsp, err := c.PutApiV3ConfigHostIdWithApplicationWildcardPlusJSONBody(ctx, id, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePutApiV3ConfigHostIdResponse(rsp)
-}
-
 // PutApiV3ConfigHostIdWithResponse performs a PUT /api/v3/config/host/{id} (the `PutApiV3ConfigHostId` operationId) request.
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) PutApiV3ConfigHostIdWithResponse(ctx context.Context, id string, body PutApiV3ConfigHostIdJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3ConfigHostIdResponse, error) {
@@ -30781,16 +31224,6 @@ func (c *ClientWithResponses) GetApiV3ConfigNamingIdWithResponse(ctx context.Con
 // Returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) PutApiV3ConfigNamingIdWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3ConfigNamingIdResponse, error) {
 	rsp, err := c.PutApiV3ConfigNamingIdWithBody(ctx, id, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePutApiV3ConfigNamingIdResponse(rsp)
-}
-
-// PutApiV3ConfigNamingIdWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/config/naming/{id} (the `PutApiV3ConfigNamingId` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) PutApiV3ConfigNamingIdWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, id string, body PutApiV3ConfigNamingIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3ConfigNamingIdResponse, error) {
-	rsp, err := c.PutApiV3ConfigNamingIdWithApplicationWildcardPlusJSONBody(ctx, id, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -31415,16 +31848,6 @@ func (c *ClientWithResponses) DeleteApiV3ExclusionsBulkWithBodyWithResponse(ctx 
 	return ParseDeleteApiV3ExclusionsBulkResponse(rsp)
 }
 
-// DeleteApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBodyWithResponse performs a DELETE /api/v3/exclusions/bulk (the `DeleteApiV3ExclusionsBulk` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) DeleteApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body DeleteApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3ExclusionsBulkResponse, error) {
-	rsp, err := c.DeleteApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBody(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteApiV3ExclusionsBulkResponse(rsp)
-}
-
 // DeleteApiV3ExclusionsBulkWithResponse performs a DELETE /api/v3/exclusions/bulk (the `DeleteApiV3ExclusionsBulk` operationId) request.
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) DeleteApiV3ExclusionsBulkWithResponse(ctx context.Context, body DeleteApiV3ExclusionsBulkJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3ExclusionsBulkResponse, error) {
@@ -31441,16 +31864,6 @@ func (c *ClientWithResponses) DeleteApiV3ExclusionsBulkWithResponse(ctx context.
 // Returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) PostApiV3ExclusionsBulkWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV3ExclusionsBulkResponse, error) {
 	rsp, err := c.PostApiV3ExclusionsBulkWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostApiV3ExclusionsBulkResponse(rsp)
-}
-
-// PostApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBodyWithResponse performs a POST /api/v3/exclusions/bulk (the `PostApiV3ExclusionsBulk` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) PostApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PostApiV3ExclusionsBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3ExclusionsBulkResponse, error) {
-	rsp, err := c.PostApiV3ExclusionsBulkWithApplicationWildcardPlusJSONBody(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -31737,16 +32150,6 @@ func (c *ClientWithResponses) GetApiV3ImportlistMovieWithResponse(ctx context.Co
 // Returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) PostApiV3ImportlistMovieWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV3ImportlistMovieResponse, error) {
 	rsp, err := c.PostApiV3ImportlistMovieWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostApiV3ImportlistMovieResponse(rsp)
-}
-
-// PostApiV3ImportlistMovieWithApplicationWildcardPlusJSONBodyWithResponse performs a POST /api/v3/importlist/movie (the `PostApiV3ImportlistMovie` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) PostApiV3ImportlistMovieWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PostApiV3ImportlistMovieApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3ImportlistMovieResponse, error) {
-	rsp, err := c.PostApiV3ImportlistMovieWithApplicationWildcardPlusJSONBody(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -32380,16 +32783,6 @@ func (c *ClientWithResponses) DeleteApiV3MovieEditorWithBodyWithResponse(ctx con
 	return ParseDeleteApiV3MovieEditorResponse(rsp)
 }
 
-// DeleteApiV3MovieEditorWithApplicationWildcardPlusJSONBodyWithResponse performs a DELETE /api/v3/movie/editor (the `DeleteApiV3MovieEditor` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) DeleteApiV3MovieEditorWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body DeleteApiV3MovieEditorApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3MovieEditorResponse, error) {
-	rsp, err := c.DeleteApiV3MovieEditorWithApplicationWildcardPlusJSONBody(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteApiV3MovieEditorResponse(rsp)
-}
-
 // DeleteApiV3MovieEditorWithResponse performs a DELETE /api/v3/movie/editor (the `DeleteApiV3MovieEditor` operationId) request.
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) DeleteApiV3MovieEditorWithResponse(ctx context.Context, body DeleteApiV3MovieEditorJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3MovieEditorResponse, error) {
@@ -32406,16 +32799,6 @@ func (c *ClientWithResponses) DeleteApiV3MovieEditorWithResponse(ctx context.Con
 // Returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) PutApiV3MovieEditorWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3MovieEditorResponse, error) {
 	rsp, err := c.PutApiV3MovieEditorWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePutApiV3MovieEditorResponse(rsp)
-}
-
-// PutApiV3MovieEditorWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/movie/editor (the `PutApiV3MovieEditor` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) PutApiV3MovieEditorWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PutApiV3MovieEditorApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3MovieEditorResponse, error) {
-	rsp, err := c.PutApiV3MovieEditorWithApplicationWildcardPlusJSONBody(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -32854,16 +33237,6 @@ func (c *ClientWithResponses) PutApiV3QualitydefinitionUpdateWithBodyWithRespons
 	return ParsePutApiV3QualitydefinitionUpdateResponse(rsp)
 }
 
-// PutApiV3QualitydefinitionUpdateWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/qualitydefinition/update (the `PutApiV3QualitydefinitionUpdate` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) PutApiV3QualitydefinitionUpdateWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PutApiV3QualitydefinitionUpdateApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3QualitydefinitionUpdateResponse, error) {
-	rsp, err := c.PutApiV3QualitydefinitionUpdateWithApplicationWildcardPlusJSONBody(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePutApiV3QualitydefinitionUpdateResponse(rsp)
-}
-
 // PutApiV3QualitydefinitionUpdateWithResponse performs a PUT /api/v3/qualitydefinition/update (the `PutApiV3QualitydefinitionUpdate` operationId) request.
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) PutApiV3QualitydefinitionUpdateWithResponse(ctx context.Context, body PutApiV3QualitydefinitionUpdateJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3QualitydefinitionUpdateResponse, error) {
@@ -32891,16 +33264,6 @@ func (c *ClientWithResponses) GetApiV3QualitydefinitionIdWithResponse(ctx contex
 // Returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) PutApiV3QualitydefinitionIdWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3QualitydefinitionIdResponse, error) {
 	rsp, err := c.PutApiV3QualitydefinitionIdWithBody(ctx, id, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePutApiV3QualitydefinitionIdResponse(rsp)
-}
-
-// PutApiV3QualitydefinitionIdWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/qualitydefinition/{id} (the `PutApiV3QualitydefinitionId` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) PutApiV3QualitydefinitionIdWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, id string, body PutApiV3QualitydefinitionIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3QualitydefinitionIdResponse, error) {
-	rsp, err := c.PutApiV3QualitydefinitionIdWithApplicationWildcardPlusJSONBody(ctx, id, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -33022,16 +33385,6 @@ func (c *ClientWithResponses) GetApiV3QueueWithResponse(ctx context.Context, par
 // Returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) DeleteApiV3QueueBulkWithBodyWithResponse(ctx context.Context, params *DeleteApiV3QueueBulkParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*DeleteApiV3QueueBulkResponse, error) {
 	rsp, err := c.DeleteApiV3QueueBulkWithBody(ctx, params, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseDeleteApiV3QueueBulkResponse(rsp)
-}
-
-// DeleteApiV3QueueBulkWithApplicationWildcardPlusJSONBodyWithResponse performs a DELETE /api/v3/queue/bulk (the `DeleteApiV3QueueBulk` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) DeleteApiV3QueueBulkWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, params *DeleteApiV3QueueBulkParams, body DeleteApiV3QueueBulkApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*DeleteApiV3QueueBulkResponse, error) {
-	rsp, err := c.DeleteApiV3QueueBulkWithApplicationWildcardPlusJSONBody(ctx, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -33192,16 +33545,6 @@ func (c *ClientWithResponses) PostApiV3ReleaseprofileWithBodyWithResponse(ctx co
 	return ParsePostApiV3ReleaseprofileResponse(rsp)
 }
 
-// PostApiV3ReleaseprofileWithApplicationWildcardPlusJSONBodyWithResponse performs a POST /api/v3/releaseprofile (the `PostApiV3Releaseprofile` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) PostApiV3ReleaseprofileWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, body PostApiV3ReleaseprofileApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3ReleaseprofileResponse, error) {
-	rsp, err := c.PostApiV3ReleaseprofileWithApplicationWildcardPlusJSONBody(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostApiV3ReleaseprofileResponse(rsp)
-}
-
 // PostApiV3ReleaseprofileWithResponse performs a POST /api/v3/releaseprofile (the `PostApiV3Releaseprofile` operationId) request.
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) PostApiV3ReleaseprofileWithResponse(ctx context.Context, body PostApiV3ReleaseprofileJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV3ReleaseprofileResponse, error) {
@@ -33240,16 +33583,6 @@ func (c *ClientWithResponses) GetApiV3ReleaseprofileIdWithResponse(ctx context.C
 // Returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) PutApiV3ReleaseprofileIdWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3ReleaseprofileIdResponse, error) {
 	rsp, err := c.PutApiV3ReleaseprofileIdWithBody(ctx, id, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePutApiV3ReleaseprofileIdResponse(rsp)
-}
-
-// PutApiV3ReleaseprofileIdWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/releaseprofile/{id} (the `PutApiV3ReleaseprofileId` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) PutApiV3ReleaseprofileIdWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, id string, body PutApiV3ReleaseprofileIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3ReleaseprofileIdResponse, error) {
-	rsp, err := c.PutApiV3ReleaseprofileIdWithApplicationWildcardPlusJSONBody(ctx, id, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -33327,16 +33660,6 @@ func (c *ClientWithResponses) GetApiV3RemotepathmappingIdWithResponse(ctx contex
 // Returns a wrapper object for the known response body format(s).
 func (c *ClientWithResponses) PutApiV3RemotepathmappingIdWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV3RemotepathmappingIdResponse, error) {
 	rsp, err := c.PutApiV3RemotepathmappingIdWithBody(ctx, id, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePutApiV3RemotepathmappingIdResponse(rsp)
-}
-
-// PutApiV3RemotepathmappingIdWithApplicationWildcardPlusJSONBodyWithResponse performs a PUT /api/v3/remotepathmapping/{id} (the `PutApiV3RemotepathmappingId` operationId) request.
-// Takes a body of the `application/*+json` content type, and returns a wrapper object for the known response body format(s).
-func (c *ClientWithResponses) PutApiV3RemotepathmappingIdWithApplicationWildcardPlusJSONBodyWithResponse(ctx context.Context, id string, body PutApiV3RemotepathmappingIdApplicationWildcardPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV3RemotepathmappingIdResponse, error) {
-	rsp, err := c.PutApiV3RemotepathmappingIdWithApplicationWildcardPlusJSONBody(ctx, id, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -33694,6 +34017,17 @@ func (c *ClientWithResponses) GetFeedV3CalendarRadarrIcsWithResponse(ctx context
 	return ParseGetFeedV3CalendarRadarrIcsResponse(rsp)
 }
 
+// GetLoggedoutWithResponse performs a GET /loggedout (the `GetLoggedout` operationId) request.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) GetLoggedoutWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetLoggedoutResponse, error) {
+	rsp, err := c.GetLoggedout(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetLoggedoutResponse(rsp)
+}
+
 // GetLoginWithResponse performs a GET /login (the `GetLogin` operationId) request.
 //
 // Returns a wrapper object for the known response body format(s).
@@ -33715,6 +34049,17 @@ func (c *ClientWithResponses) PostLoginWithBodyWithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParsePostLoginResponse(rsp)
+}
+
+// GetLoginSsoWithResponse performs a GET /login/sso (the `GetLoginSso` operationId) request.
+//
+// Returns a wrapper object for the known response body format(s).
+func (c *ClientWithResponses) GetLoginSsoWithResponse(ctx context.Context, params *GetLoginSsoParams, reqEditors ...RequestEditorFn) (*GetLoginSsoResponse, error) {
+	rsp, err := c.GetLoginSso(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetLoginSsoResponse(rsp)
 }
 
 // GetLogoutWithResponse performs a GET /logout (the `GetLogout` operationId) request.
@@ -33808,9 +34153,6 @@ func ParseGetApiV3AlttitleResponse(rsp *http.Response) (*GetApiV3AlttitleRespons
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -33837,8 +34179,8 @@ func ParseGetApiV3AlttitleIdResponse(rsp *http.Response) (*GetApiV3AlttitleIdRes
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -33885,15 +34227,15 @@ func ParsePostApiV3AutotaggingResponse(rsp *http.Response) (*PostApiV3Autotaggin
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest AutoTaggingResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -33911,6 +34253,16 @@ func ParseGetApiV3AutotaggingSchemaResponse(rsp *http.Response) (*GetApiV3Autota
 	response := &GetApiV3AutotaggingSchemaResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []AutoTaggingSpecificationSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -33953,8 +34305,8 @@ func ParseGetApiV3AutotaggingIdResponse(rsp *http.Response) (*GetApiV3Autotaggin
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -33975,15 +34327,15 @@ func ParsePutApiV3AutotaggingIdResponse(rsp *http.Response) (*PutApiV3Autotaggin
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest AutoTaggingResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34029,6 +34381,16 @@ func ParseDeleteApiV3BlocklistBulkResponse(rsp *http.Response) (*DeleteApiV3Bloc
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -34052,9 +34414,6 @@ func ParseGetApiV3BlocklistMovieResponse(rsp *http.Response) (*GetApiV3Blocklist
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -34142,6 +34501,16 @@ func ParsePutApiV3CollectionResponse(rsp *http.Response) (*PutApiV3CollectionRes
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []CollectionResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -34166,8 +34535,8 @@ func ParseGetApiV3CollectionIdResponse(rsp *http.Response) (*GetApiV3CollectionI
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34188,15 +34557,15 @@ func ParsePutApiV3CollectionIdResponse(rsp *http.Response) (*PutApiV3CollectionI
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest CollectionResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34224,9 +34593,6 @@ func ParseGetApiV3CommandResponse(rsp *http.Response) (*GetApiV3CommandResponse,
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -34246,12 +34612,15 @@ func ParsePostApiV3CommandResponse(rsp *http.Response) (*PostApiV3CommandRespons
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest CommandResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34295,8 +34664,8 @@ func ParseGetApiV3CommandIdResponse(rsp *http.Response) (*GetApiV3CommandIdRespo
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34350,8 +34719,8 @@ func ParseGetApiV3ConfigDownloadclientIdResponse(rsp *http.Response) (*GetApiV3C
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34372,15 +34741,15 @@ func ParsePutApiV3ConfigDownloadclientIdResponse(rsp *http.Response) (*PutApiV3C
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest DownloadClientConfigResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34408,9 +34777,6 @@ func ParseGetApiV3ConfigHostResponse(rsp *http.Response) (*GetApiV3ConfigHostRes
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -34437,8 +34803,8 @@ func ParseGetApiV3ConfigHostIdResponse(rsp *http.Response) (*GetApiV3ConfigHostI
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34459,15 +34825,15 @@ func ParsePutApiV3ConfigHostIdResponse(rsp *http.Response) (*PutApiV3ConfigHostI
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest HostConfigResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34521,8 +34887,8 @@ func ParseGetApiV3ConfigImportlistIdResponse(rsp *http.Response) (*GetApiV3Confi
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34543,15 +34909,15 @@ func ParsePutApiV3ConfigImportlistIdResponse(rsp *http.Response) (*PutApiV3Confi
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest ImportListConfigResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34605,8 +34971,8 @@ func ParseGetApiV3ConfigIndexerIdResponse(rsp *http.Response) (*GetApiV3ConfigIn
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34627,15 +34993,15 @@ func ParsePutApiV3ConfigIndexerIdResponse(rsp *http.Response) (*PutApiV3ConfigIn
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest IndexerConfigResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34689,8 +35055,8 @@ func ParseGetApiV3ConfigMediamanagementIdResponse(rsp *http.Response) (*GetApiV3
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34711,15 +35077,15 @@ func ParsePutApiV3ConfigMediamanagementIdResponse(rsp *http.Response) (*PutApiV3
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest MediaManagementConfigResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34773,8 +35139,8 @@ func ParseGetApiV3ConfigMetadataIdResponse(rsp *http.Response) (*GetApiV3ConfigM
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34795,15 +35161,15 @@ func ParsePutApiV3ConfigMetadataIdResponse(rsp *http.Response) (*PutApiV3ConfigM
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest MetadataConfigResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34831,9 +35197,6 @@ func ParseGetApiV3ConfigNamingResponse(rsp *http.Response) (*GetApiV3ConfigNamin
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -34850,6 +35213,16 @@ func ParseGetApiV3ConfigNamingExamplesResponse(rsp *http.Response) (*GetApiV3Con
 	response := &GetApiV3ConfigNamingExamplesResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NamingExampleResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -34876,8 +35249,8 @@ func ParseGetApiV3ConfigNamingIdResponse(rsp *http.Response) (*GetApiV3ConfigNam
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34898,15 +35271,15 @@ func ParsePutApiV3ConfigNamingIdResponse(rsp *http.Response) (*PutApiV3ConfigNam
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest NamingConfigResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34960,8 +35333,8 @@ func ParseGetApiV3ConfigUiIdResponse(rsp *http.Response) (*GetApiV3ConfigUiIdRes
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -34982,15 +35355,15 @@ func ParsePutApiV3ConfigUiIdResponse(rsp *http.Response) (*PutApiV3ConfigUiIdRes
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest UiConfigResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35008,6 +35381,16 @@ func ParseGetApiV3CreditResponse(rsp *http.Response) (*GetApiV3CreditResponse, e
 	response := &GetApiV3CreditResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []CreditResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -35034,8 +35417,8 @@ func ParseGetApiV3CreditIdResponse(rsp *http.Response) (*GetApiV3CreditIdRespons
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35063,9 +35446,6 @@ func ParseGetApiV3CustomfilterResponse(rsp *http.Response) (*GetApiV3Customfilte
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -35085,15 +35465,15 @@ func ParsePostApiV3CustomfilterResponse(rsp *http.Response) (*PostApiV3Customfil
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest CustomFilterResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35137,8 +35517,8 @@ func ParseGetApiV3CustomfilterIdResponse(rsp *http.Response) (*GetApiV3Customfil
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35159,15 +35539,15 @@ func ParsePutApiV3CustomfilterIdResponse(rsp *http.Response) (*PutApiV3Customfil
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest CustomFilterResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35214,15 +35594,15 @@ func ParsePostApiV3CustomformatResponse(rsp *http.Response) (*PostApiV3Customfor
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest CustomFormatResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35240,6 +35620,16 @@ func ParseDeleteApiV3CustomformatBulkResponse(rsp *http.Response) (*DeleteApiV3C
 	response := &DeleteApiV3CustomformatBulkResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -35260,11 +35650,14 @@ func ParsePutApiV3CustomformatBulkResponse(rsp *http.Response) (*PutApiV3Customf
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest CustomFormatResource
+		var dest []CustomFormatResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
 
 	}
 
@@ -35282,6 +35675,16 @@ func ParseGetApiV3CustomformatSchemaResponse(rsp *http.Response) (*GetApiV3Custo
 	response := &GetApiV3CustomformatSchemaResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []CustomFormatSpecificationSchema
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -35324,8 +35727,8 @@ func ParseGetApiV3CustomformatIdResponse(rsp *http.Response) (*GetApiV3Customfor
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35346,15 +35749,15 @@ func ParsePutApiV3CustomformatIdResponse(rsp *http.Response) (*PutApiV3Customfor
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest CustomFormatResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35382,9 +35785,6 @@ func ParseGetApiV3DelayprofileResponse(rsp *http.Response) (*GetApiV3Delayprofil
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -35404,15 +35804,15 @@ func ParsePostApiV3DelayprofileResponse(rsp *http.Response) (*PostApiV3Delayprof
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest DelayProfileResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35439,9 +35839,6 @@ func ParsePutApiV3DelayprofileReorderIdResponse(rsp *http.Response) (*PutApiV3De
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -35485,8 +35882,8 @@ func ParseGetApiV3DelayprofileIdResponse(rsp *http.Response) (*GetApiV3Delayprof
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35507,15 +35904,15 @@ func ParsePutApiV3DelayprofileIdResponse(rsp *http.Response) (*PutApiV3Delayprof
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest DelayProfileResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35542,9 +35939,6 @@ func ParseGetApiV3DiskspaceResponse(rsp *http.Response) (*GetApiV3DiskspaceRespo
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -35591,12 +35985,15 @@ func ParsePostApiV3DownloadclientResponse(rsp *http.Response) (*PostApiV3Downloa
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest DownloadClientResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35632,6 +36029,16 @@ func ParseDeleteApiV3DownloadclientBulkResponse(rsp *http.Response) (*DeleteApiV
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -35650,11 +36057,14 @@ func ParsePutApiV3DownloadclientBulkResponse(rsp *http.Response) (*PutApiV3Downl
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest DownloadClientResource
+		var dest []DownloadClientResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
 
 	}
 
@@ -35716,6 +36126,23 @@ func ParsePostApiV3DownloadclientTestallResponse(rsp *http.Response) (*PostApiV3
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ProviderTestAllResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest []ProviderTestAllResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -35730,6 +36157,16 @@ func ParseDeleteApiV3DownloadclientIdResponse(rsp *http.Response) (*DeleteApiV3D
 	response := &DeleteApiV3DownloadclientIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -35756,8 +36193,8 @@ func ParseGetApiV3DownloadclientIdResponse(rsp *http.Response) (*GetApiV3Downloa
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35778,12 +36215,15 @@ func ParsePutApiV3DownloadclientIdResponse(rsp *http.Response) (*PutApiV3Downloa
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest DownloadClientResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35830,15 +36270,15 @@ func ParsePostApiV3ExclusionsResponse(rsp *http.Response) (*PostApiV3ExclusionsR
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest ImportListExclusionResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35858,6 +36298,16 @@ func ParseDeleteApiV3ExclusionsBulkResponse(rsp *http.Response) (*DeleteApiV3Exc
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -35872,6 +36322,16 @@ func ParsePostApiV3ExclusionsBulkResponse(rsp *http.Response) (*PostApiV3Exclusi
 	response := &PostApiV3ExclusionsBulkResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ImportListExclusionResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -35940,8 +36400,8 @@ func ParseGetApiV3ExclusionsIdResponse(rsp *http.Response) (*GetApiV3ExclusionsI
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35962,15 +36422,15 @@ func ParsePutApiV3ExclusionsIdResponse(rsp *http.Response) (*PutApiV3ExclusionsI
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest ImportListExclusionResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -35998,9 +36458,6 @@ func ParseGetApiV3ExtrafileResponse(rsp *http.Response) (*GetApiV3ExtrafileRespo
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -36019,6 +36476,16 @@ func ParseGetApiV3FilesystemResponse(rsp *http.Response) (*GetApiV3FilesystemRes
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FileSystemResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -36035,6 +36502,16 @@ func ParseGetApiV3FilesystemMediafilesResponse(rsp *http.Response) (*GetApiV3Fil
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []FileSystemMediaFileResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -36049,6 +36526,16 @@ func ParseGetApiV3FilesystemTypeResponse(rsp *http.Response) (*GetApiV3Filesyste
 	response := &GetApiV3FilesystemTypeResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FileSystemTypeResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -36074,9 +36561,6 @@ func ParseGetApiV3HealthResponse(rsp *http.Response) (*GetApiV3HealthResponse, e
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -36120,6 +36604,16 @@ func ParsePostApiV3HistoryFailedIdResponse(rsp *http.Response) (*PostApiV3Histor
 	response := &PostApiV3HistoryFailedIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -36217,12 +36711,15 @@ func ParsePostApiV3ImportlistResponse(rsp *http.Response) (*PostApiV3ImportlistR
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest ImportListResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -36258,6 +36755,16 @@ func ParseDeleteApiV3ImportlistBulkResponse(rsp *http.Response) (*DeleteApiV3Imp
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -36276,11 +36783,14 @@ func ParsePutApiV3ImportlistBulkResponse(rsp *http.Response) (*PutApiV3Importlis
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest ImportListResource
+		var dest []ImportListResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
 
 	}
 
@@ -36300,6 +36810,16 @@ func ParseGetApiV3ImportlistMovieResponse(rsp *http.Response) (*GetApiV3Importli
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ImportListMoviesResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -36314,6 +36834,16 @@ func ParsePostApiV3ImportlistMovieResponse(rsp *http.Response) (*PostApiV3Import
 	response := &PostApiV3ImportlistMovieResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []MovieResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -36374,6 +36904,23 @@ func ParsePostApiV3ImportlistTestallResponse(rsp *http.Response) (*PostApiV3Impo
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ProviderTestAllResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest []ProviderTestAllResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -36388,6 +36935,16 @@ func ParseDeleteApiV3ImportlistIdResponse(rsp *http.Response) (*DeleteApiV3Impor
 	response := &DeleteApiV3ImportlistIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -36414,8 +36971,8 @@ func ParseGetApiV3ImportlistIdResponse(rsp *http.Response) (*GetApiV3ImportlistI
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -36436,12 +36993,15 @@ func ParsePutApiV3ImportlistIdResponse(rsp *http.Response) (*PutApiV3ImportlistI
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest ImportListResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -36488,12 +37048,15 @@ func ParsePostApiV3IndexerResponse(rsp *http.Response) (*PostApiV3IndexerRespons
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest IndexerResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -36529,6 +37092,16 @@ func ParseDeleteApiV3IndexerBulkResponse(rsp *http.Response) (*DeleteApiV3Indexe
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -36547,11 +37120,14 @@ func ParsePutApiV3IndexerBulkResponse(rsp *http.Response) (*PutApiV3IndexerBulkR
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest IndexerResource
+		var dest []IndexerResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
 
 	}
 
@@ -36613,6 +37189,23 @@ func ParsePostApiV3IndexerTestallResponse(rsp *http.Response) (*PostApiV3Indexer
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ProviderTestAllResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest []ProviderTestAllResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -36627,6 +37220,16 @@ func ParseDeleteApiV3IndexerIdResponse(rsp *http.Response) (*DeleteApiV3IndexerI
 	response := &DeleteApiV3IndexerIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -36653,8 +37256,8 @@ func ParseGetApiV3IndexerIdResponse(rsp *http.Response) (*GetApiV3IndexerIdRespo
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -36675,12 +37278,15 @@ func ParsePutApiV3IndexerIdResponse(rsp *http.Response) (*PutApiV3IndexerIdRespo
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest IndexerResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -36708,9 +37314,6 @@ func ParseGetApiV3IndexerflagResponse(rsp *http.Response) (*GetApiV3IndexerflagR
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -36736,9 +37339,6 @@ func ParseGetApiV3LanguageResponse(rsp *http.Response) (*GetApiV3LanguageRespons
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -36766,8 +37366,8 @@ func ParseGetApiV3LanguageIdResponse(rsp *http.Response) (*GetApiV3LanguageIdRes
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -36785,19 +37385,6 @@ func ParseGetApiV3LocalizationResponse(rsp *http.Response) (*GetApiV3Localizatio
 	response := &GetApiV3LocalizationResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest string
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -36876,9 +37463,6 @@ func ParseGetApiV3LogFileResponse(rsp *http.Response) (*GetApiV3LogFileResponse,
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -36904,9 +37488,6 @@ func ParseGetApiV3LogFileUpdateResponse(rsp *http.Response) (*GetApiV3LogFileUpd
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -36984,6 +37565,19 @@ func ParsePostApiV3ManualimportResponse(rsp *http.Response) (*PostApiV3Manualimp
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ManualImportReprocessResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	}
+
 	return response, nil
 }
 
@@ -37043,12 +37637,15 @@ func ParsePostApiV3MetadataResponse(rsp *http.Response) (*PostApiV3MetadataRespo
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest MetadataResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37126,6 +37723,23 @@ func ParsePostApiV3MetadataTestallResponse(rsp *http.Response) (*PostApiV3Metada
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ProviderTestAllResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest []ProviderTestAllResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -37140,6 +37754,16 @@ func ParseDeleteApiV3MetadataIdResponse(rsp *http.Response) (*DeleteApiV3Metadat
 	response := &DeleteApiV3MetadataIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -37166,8 +37790,8 @@ func ParseGetApiV3MetadataIdResponse(rsp *http.Response) (*GetApiV3MetadataIdRes
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37188,12 +37812,15 @@ func ParsePutApiV3MetadataIdResponse(rsp *http.Response) (*PutApiV3MetadataIdRes
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest MetadataResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37221,9 +37848,6 @@ func ParseGetApiV3MovieResponse(rsp *http.Response) (*GetApiV3MovieResponse, err
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -37243,12 +37867,15 @@ func ParsePostApiV3MovieResponse(rsp *http.Response) (*PostApiV3MovieResponse, e
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest MovieResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37268,6 +37895,16 @@ func ParseDeleteApiV3MovieEditorResponse(rsp *http.Response) (*DeleteApiV3MovieE
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -37282,6 +37919,19 @@ func ParsePutApiV3MovieEditorResponse(rsp *http.Response) (*PutApiV3MovieEditorR
 	response := &PutApiV3MovieEditorResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []MovieResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
 	}
 
 	return response, nil
@@ -37428,8 +38078,8 @@ func ParseGetApiV3MovieIdResponse(rsp *http.Response) (*GetApiV3MovieIdResponse,
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37450,12 +38100,15 @@ func ParsePutApiV3MovieIdResponse(rsp *http.Response) (*PutApiV3MovieIdResponse,
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest MovieResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37473,6 +38126,16 @@ func ParseGetApiV3MovieIdFolderResponse(rsp *http.Response) (*GetApiV3MovieIdFol
 	response := &GetApiV3MovieIdFolderResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MovieFolderResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -37499,6 +38162,9 @@ func ParseGetApiV3MoviefileResponse(rsp *http.Response) (*GetApiV3MoviefileRespo
 		}
 		response.JSON200 = &dest
 
+	case rsp.StatusCode == 400:
+		break // No content-type
+
 	}
 
 	return response, nil
@@ -37517,6 +38183,19 @@ func ParseDeleteApiV3MoviefileBulkResponse(rsp *http.Response) (*DeleteApiV3Movi
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	}
+
 	return response, nil
 }
 
@@ -37533,6 +38212,16 @@ func ParsePutApiV3MoviefileBulkResponse(rsp *http.Response) (*PutApiV3MoviefileB
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []MovieFileResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -37547,6 +38236,16 @@ func ParsePutApiV3MoviefileEditorResponse(rsp *http.Response) (*PutApiV3Moviefil
 	response := &PutApiV3MoviefileEditorResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []MovieFileResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -37589,8 +38288,8 @@ func ParseGetApiV3MoviefileIdResponse(rsp *http.Response) (*GetApiV3MoviefileIdR
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37611,15 +38310,15 @@ func ParsePutApiV3MoviefileIdResponse(rsp *http.Response) (*PutApiV3MoviefileIdR
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest MovieFileResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37666,12 +38365,15 @@ func ParsePostApiV3NotificationResponse(rsp *http.Response) (*PostApiV3Notificat
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest NotificationResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37749,6 +38451,23 @@ func ParsePostApiV3NotificationTestallResponse(rsp *http.Response) (*PostApiV3No
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ProviderTestAllResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest []ProviderTestAllResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -37763,6 +38482,16 @@ func ParseDeleteApiV3NotificationIdResponse(rsp *http.Response) (*DeleteApiV3Not
 	response := &DeleteApiV3NotificationIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -37789,8 +38518,8 @@ func ParseGetApiV3NotificationIdResponse(rsp *http.Response) (*GetApiV3Notificat
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37811,12 +38540,15 @@ func ParsePutApiV3NotificationIdResponse(rsp *http.Response) (*PutApiV3Notificat
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest NotificationResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37844,9 +38576,6 @@ func ParseGetApiV3ParseResponse(rsp *http.Response) (*GetApiV3ParseResponse, err
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -37872,9 +38601,6 @@ func ParseGetApiV3QualitydefinitionResponse(rsp *http.Response) (*GetApiV3Qualit
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -37902,9 +38628,6 @@ func ParseGetApiV3QualitydefinitionLimitsResponse(rsp *http.Response) (*GetApiV3
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -37921,6 +38644,16 @@ func ParsePutApiV3QualitydefinitionUpdateResponse(rsp *http.Response) (*PutApiV3
 	response := &PutApiV3QualitydefinitionUpdateResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []QualityDefinitionResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -37947,8 +38680,8 @@ func ParseGetApiV3QualitydefinitionIdResponse(rsp *http.Response) (*GetApiV3Qual
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -37969,15 +38702,15 @@ func ParsePutApiV3QualitydefinitionIdResponse(rsp *http.Response) (*PutApiV3Qual
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest QualityDefinitionResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38005,9 +38738,6 @@ func ParseGetApiV3QualityprofileResponse(rsp *http.Response) (*GetApiV3Qualitypr
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -38027,15 +38757,15 @@ func ParsePostApiV3QualityprofileResponse(rsp *http.Response) (*PostApiV3Quality
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest QualityProfileResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38062,9 +38792,6 @@ func ParseGetApiV3QualityprofileSchemaResponse(rsp *http.Response) (*GetApiV3Qua
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -38108,8 +38835,8 @@ func ParseGetApiV3QualityprofileIdResponse(rsp *http.Response) (*GetApiV3Quality
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38130,15 +38857,15 @@ func ParsePutApiV3QualityprofileIdResponse(rsp *http.Response) (*PutApiV3Quality
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest QualityProfileResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38184,6 +38911,16 @@ func ParseDeleteApiV3QueueBulkResponse(rsp *http.Response) (*DeleteApiV3QueueBul
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -38208,9 +38945,6 @@ func ParseGetApiV3QueueDetailsResponse(rsp *http.Response) (*GetApiV3QueueDetail
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -38229,6 +38963,19 @@ func ParsePostApiV3QueueGrabBulkResponse(rsp *http.Response) (*PostApiV3QueueGra
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
 	return response, nil
 }
 
@@ -38243,6 +38990,19 @@ func ParsePostApiV3QueueGrabIdResponse(rsp *http.Response) (*PostApiV3QueueGrabI
 	response := &PostApiV3QueueGrabIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
 	}
 
 	return response, nil
@@ -38268,9 +39028,6 @@ func ParseGetApiV3QueueStatusResponse(rsp *http.Response) (*GetApiV3QueueStatusR
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -38314,6 +39071,9 @@ func ParseGetApiV3ReleaseResponse(rsp *http.Response) (*GetApiV3ReleaseResponse,
 		}
 		response.JSON200 = &dest
 
+	case rsp.StatusCode == 400:
+		break // No content-type
+
 	}
 
 	return response, nil
@@ -38330,6 +39090,19 @@ func ParsePostApiV3ReleaseResponse(rsp *http.Response) (*PostApiV3ReleaseRespons
 	response := &PostApiV3ReleaseResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ReleaseResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
 	}
 
 	return response, nil
@@ -38356,8 +39129,8 @@ func ParsePostApiV3ReleasePushResponse(rsp *http.Response) (*PostApiV3ReleasePus
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 400:
+		break // No content-type
 
 	}
 
@@ -38385,9 +39158,6 @@ func ParseGetApiV3ReleaseprofileResponse(rsp *http.Response) (*GetApiV3Releasepr
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -38407,15 +39177,15 @@ func ParsePostApiV3ReleaseprofileResponse(rsp *http.Response) (*PostApiV3Release
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest ReleaseProfileResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38459,8 +39229,8 @@ func ParseGetApiV3ReleaseprofileIdResponse(rsp *http.Response) (*GetApiV3Release
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38481,15 +39251,15 @@ func ParsePutApiV3ReleaseprofileIdResponse(rsp *http.Response) (*PutApiV3Release
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest ReleaseProfileResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38517,9 +39287,6 @@ func ParseGetApiV3RemotepathmappingResponse(rsp *http.Response) (*GetApiV3Remote
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -38539,15 +39306,15 @@ func ParsePostApiV3RemotepathmappingResponse(rsp *http.Response) (*PostApiV3Remo
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest RemotePathMappingResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38591,8 +39358,8 @@ func ParseGetApiV3RemotepathmappingIdResponse(rsp *http.Response) (*GetApiV3Remo
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38620,8 +39387,8 @@ func ParsePutApiV3RemotepathmappingIdResponse(rsp *http.Response) (*PutApiV3Remo
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38649,8 +39416,8 @@ func ParseGetApiV3RenameResponse(rsp *http.Response) (*GetApiV3RenameResponse, e
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 400:
+		break // No content-type
 
 	}
 
@@ -38678,9 +39445,6 @@ func ParseGetApiV3RootfolderResponse(rsp *http.Response) (*GetApiV3RootfolderRes
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -38700,15 +39464,15 @@ func ParsePostApiV3RootfolderResponse(rsp *http.Response) (*PostApiV3RootfolderR
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest RootFolderResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38752,8 +39516,8 @@ func ParseGetApiV3RootfolderIdResponse(rsp *http.Response) (*GetApiV3RootfolderI
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -38781,9 +39545,6 @@ func ParseGetApiV3SystemBackupResponse(rsp *http.Response) (*GetApiV3SystemBacku
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -38802,6 +39563,23 @@ func ParsePostApiV3SystemBackupRestoreUploadResponse(rsp *http.Response) (*PostA
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest BackupRestoreResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BackupRestoreErrorResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -38816,6 +39594,19 @@ func ParsePostApiV3SystemBackupRestoreIdResponse(rsp *http.Response) (*PostApiV3
 	response := &PostApiV3SystemBackupRestoreIdResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest BackupRestoreResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
 	}
 
 	return response, nil
@@ -38834,6 +39625,19 @@ func ParseDeleteApiV3SystemBackupIdResponse(rsp *http.Response) (*DeleteApiV3Sys
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
 	return response, nil
 }
 
@@ -38848,6 +39652,16 @@ func ParsePostApiV3SystemRestartResponse(rsp *http.Response) (*PostApiV3SystemRe
 	response := &PostApiV3SystemRestartResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SystemRestartResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -38882,6 +39696,16 @@ func ParseGetApiV3SystemRoutesDuplicateResponse(rsp *http.Response) (*GetApiV3Sy
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest map[string][]string
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
 	return response, nil
 }
 
@@ -38896,6 +39720,16 @@ func ParsePostApiV3SystemShutdownResponse(rsp *http.Response) (*PostApiV3SystemS
 	response := &PostApiV3SystemShutdownResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SystemShutdownResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
@@ -38921,9 +39755,6 @@ func ParseGetApiV3SystemStatusResponse(rsp *http.Response) (*GetApiV3SystemStatu
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -38951,9 +39782,6 @@ func ParseGetApiV3SystemTaskResponse(rsp *http.Response) (*GetApiV3SystemTaskRes
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -38980,8 +39808,8 @@ func ParseGetApiV3SystemTaskIdResponse(rsp *http.Response) (*GetApiV3SystemTaskI
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -39009,9 +39837,6 @@ func ParseGetApiV3TagResponse(rsp *http.Response) (*GetApiV3TagResponse, error) 
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -39031,15 +39856,15 @@ func ParsePostApiV3TagResponse(rsp *http.Response) (*PostApiV3TagResponse, error
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest TagResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -39067,9 +39892,6 @@ func ParseGetApiV3TagDetailResponse(rsp *http.Response) (*GetApiV3TagDetailRespo
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
-
 	}
 
 	return response, nil
@@ -39096,8 +39918,8 @@ func ParseGetApiV3TagDetailIdResponse(rsp *http.Response) (*GetApiV3TagDetailIdR
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -39141,8 +39963,8 @@ func ParseGetApiV3TagIdResponse(rsp *http.Response) (*GetApiV3TagIdResponse, err
 		}
 		response.JSON200 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -39163,15 +39985,15 @@ func ParsePutApiV3TagIdResponse(rsp *http.Response) (*PutApiV3TagIdResponse, err
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest TagResource
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON202 = &dest
 
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
+	case rsp.StatusCode == 404:
+		break // No content-type
 
 	}
 
@@ -39198,9 +40020,6 @@ func ParseGetApiV3UpdateResponse(rsp *http.Response) (*GetApiV3UpdateResponse, e
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	case rsp.StatusCode == 200:
-		// Content-type (text/plain) unsupported
 
 	}
 
@@ -39291,6 +40110,22 @@ func ParseGetFeedV3CalendarRadarrIcsResponse(rsp *http.Response) (*GetFeedV3Cale
 	return response, nil
 }
 
+// ParseGetLoggedoutResponse parses an HTTP response from a GetLoggedoutWithResponse call
+func ParseGetLoggedoutResponse(rsp *http.Response) (*GetLoggedoutResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetLoggedoutResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseGetLoginResponse parses an HTTP response from a GetLoginWithResponse call
 func ParseGetLoginResponse(rsp *http.Response) (*GetLoginResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -39316,6 +40151,35 @@ func ParsePostLoginResponse(rsp *http.Response) (*PostLoginResponse, error) {
 	}
 
 	response := &PostLoginResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 302:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ProblemDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetLoginSsoResponse parses an HTTP response from a GetLoginSsoWithResponse call
+func ParseGetLoginSsoResponse(rsp *http.Response) (*GetLoginSsoResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetLoginSsoResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -39360,6 +40224,13 @@ func ParseGetPingResponse(rsp *http.Response) (*GetPingResponse, error) {
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest PingResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
 	}
 
 	return response, nil
@@ -39385,6 +40256,13 @@ func ParseHeadPingResponse(rsp *http.Response) (*HeadPingResponse, error) {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest PingResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 
